@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/lirenzhucn/bookkeeper"
+	"github.com/lirenzhucn/bookkeeper/internal/pkg/bookkeeper"
 
 	"github.com/gorilla/mux"
 )
@@ -42,7 +42,7 @@ func handleRequests() {
 }
 
 func populateAccounts() {
-	Accounts = []Account{
+	Accounts = []bookkeeper.Account{
 		{Id: 1, Name: "LZ Chase Checking", Type: "Debit", Category: "Asset", Balance: 0},
 		{Id: 2, Name: "LZ Chase Ultimate Freedom", Type: "Credit", Category: "Liability", Balance: 0},
 	}
