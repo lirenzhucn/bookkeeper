@@ -1,11 +1,10 @@
 package bookkeeper
 
 type Account struct {
-	Id       int     `json:"Id"`
-	Name     string  `json:"Name"`
-	Type     string  `json:"Type"`
-	Category string  `json:"Category"`
-	Balance  float32 `json:"Balance"`
+	Id       int    `json:"Id"`
+	Name     string `json:"Name"`
+	Type     string `json:"Type"`
+	Category string `json:"Category"`
 }
 
 var VALID_ACCOUNT_TYPES = []string{"Credit", "Debit"}

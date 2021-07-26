@@ -29,8 +29,8 @@ func returnSingleAccount(w http.ResponseWriter, r *http.Request) {
 
 func PopulateAccounts() {
 	Accounts = []bookkeeper.Account{
-		{Id: 1, Name: "LZ Chase Checking", Type: "Debit", Category: "Asset", Balance: 0},
-		{Id: 2, Name: "LZ Chase Ultimate Freedom", Type: "Credit", Category: "Liability", Balance: 0},
+		{Id: 1, Name: "LZ Chase Checking", Type: "Debit", Category: "Asset"},
+		{Id: 2, Name: "LZ Chase Ultimate Freedom", Type: "Credit", Category: "Liability"},
 	}
 	for _, account := range Accounts {
 		if !account.Validate() {
