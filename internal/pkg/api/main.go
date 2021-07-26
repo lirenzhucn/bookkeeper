@@ -17,5 +17,7 @@ func HandleRequests(port string) {
 	myRouter.HandleFunc("/", homePage)
 	myRouter.HandleFunc("/accounts", returnAllAccounts)
 	myRouter.HandleFunc("/accounts/{id}", returnSingleAccount)
+	myRouter.HandleFunc("/transactions", returnAllTransactions)
+	myRouter.HandleFunc("/transactions/{id}", returnSingleTransaction)
 	log.Fatal(http.ListenAndServe(":"+port, myRouter))
 }
