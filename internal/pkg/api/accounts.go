@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -23,18 +22,6 @@ func returnSingleAccount(w http.ResponseWriter, r *http.Request) {
 		if strconv.Itoa(account.Id) == key {
 			json.NewEncoder(w).Encode(account)
 			break
-		}
-	}
-}
-
-func PopulateAccounts() {
-	Accounts = []bookkeeper.Account{
-		{Id: 1, Name: "LZ Chase Checking", Type: "Debit", Category: "Asset"},
-		{Id: 2, Name: "LZ Chase Ultimate Freedom", Type: "Credit", Category: "Liability"},
-	}
-	for _, account := range Accounts {
-		if !account.Validate() {
-			fmt.Printf("Invalid account %d\n", account.Id)
 		}
 	}
 }
