@@ -21,7 +21,6 @@ var rootCmd = &cobra.Command{
 keeping financial records and getting various reports.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		log.Printf("port=%s", cmd.Flags().Lookup("port").Value.String())
-		log.Printf("author=%s", cmd.Flags().Lookup("author").Value.String())
 		if port, err := cmd.Flags().GetInt("port"); err == nil {
 			api.HandleRequests(fmt.Sprintf("%d", port))
 		} else {
@@ -41,7 +40,6 @@ func Init() {
 	rootCmd.Flags().StringVar(&cfgFile, "config", "",
 		"config file (default is $HOME/.bkpsrv.yaml)")
 	rootCmd.Flags().IntP("port", "p", 10000, "the port of the server")
-	rootCmd.Flags().StringP("author", "a", "", "author name")
 }
 
 func initConfig() {
