@@ -1,7 +1,9 @@
 package main
 
-import "github.com/lirenzhucn/bookkeeper/internal/pkg/api"
+import "github.com/lirenzhucn/bookkeeper/internal/pkg/bkpsrv/cmd"
 
 func main() {
-	api.HandleRequests("10000")
+	cmd.Init()
+	cmd.Execute()
+	// api.HandleRequests("10000")
 }
