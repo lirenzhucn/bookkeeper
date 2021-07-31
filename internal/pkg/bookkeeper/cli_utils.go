@@ -11,13 +11,11 @@ import (
 	"github.com/spf13/viper"
 )
 
-var cfgFile string
-
-func InitConfigYaml(cmd *cobra.Command, configName string) {
-	InitConfig(cmd, configName, "yaml")
+func InitConfigYaml(cmd *cobra.Command, configName string, cfgFile string) {
+	InitConfig(cmd, configName, "yaml", cfgFile)
 }
 
-func InitConfig(cmd *cobra.Command, configName string, configType string) {
+func InitConfig(cmd *cobra.Command, configName string, configType string, cfgFile string) {
 	if cfgFile != "" {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)

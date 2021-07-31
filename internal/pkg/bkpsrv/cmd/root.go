@@ -36,5 +36,5 @@ func Init() {
 }
 
 func initConfig() {
-	bookkeeper.InitConfigYaml(rootCmd, ".bkpsrv")
+	bookkeeper.InitConfigYaml(rootCmd, ".bkpsrv", cfgFile)
 }
