@@ -1,18 +1,12 @@
 package main
 
 import (
-	"log"
-
 	"github.com/lirenzhucn/bookkeeper/internal/pkg/bkpsrv/cmd"
-	"go.uber.org/zap"
+	"github.com/lirenzhucn/bookkeeper/internal/pkg/bookkeeper"
 )
 
 func main() {
-	logger, err := zap.NewProduction()
-	if err != nil {
-		log.Fatal(err)
-	}
-	zap.ReplaceGlobals(logger)
+	bookkeeper.SetupZapGlobals()
 	cmd.Init()
 	cmd.Execute()
 }

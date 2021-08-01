@@ -1,6 +1,11 @@
 package bookkeeper
 
-import "regexp"
+import (
+	"log"
+	"regexp"
+
+	"go.uber.org/zap"
+)
 
 func stringInList(s string, l []string) bool {
 	for _, ss := range l {
@@ -17,4 +22,12 @@ func MaskDbPassword(msg string) string {
 		return msg
 	}
 	return r.ReplaceAllString(msg, "${1}[REDACTED]@")
+}
+
+func SetupZapGlobals() {
+	logger, err := zap.NewProduction()
+	if err != nil {
+		log.Fatal(err)
+	}
+	zap.ReplaceGlobals(logger)
 }
