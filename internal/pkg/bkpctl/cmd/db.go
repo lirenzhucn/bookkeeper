@@ -3,10 +3,12 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/lirenzhucn/bookkeeper/internal/pkg/bookkeeper"
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 )
 
 var dbConfigFile string
@@ -15,6 +17,30 @@ var dbCmd = &cobra.Command{
 	Short: "Interact with database directly",
 	Long: `db is for direct maintenance of the database without going through
 the API server.`,
+}
+var dbTestCmd = &cobra.Command{
+	Use:   "test",
+	Short: "Test connection to the database",
+	Run: func(cmd *cobra.Command, args []string) {
+		var msg string
+		sugar := zap.L().Sugar()
+		defer sugar.Sync()
+		db_url, err := cmd.Flags().GetString("db-url")
+		if err != nil {
+			sugar.Errorw("get db_url failed", "error", err)
+			os.Exit(1)
+		}
+		dbpool, err := pgxpool.Connect(context.Background(), db_url)
+		if err != nil {
+			sugar.Errorw("connection to database failed", "error", err)
+		}
+		err = dbpool.QueryRow(context.Background(), "select 'test'").Scan(&msg)
+		if err != nil {
+			sugar.Errorw("simply query to the database failed", "error", err)
+		}
+		fmt.Printf("Connection to database [%s] was successful\n",
+			bookkeeper.MaskDbPassword(db_url))
+	},
 }
 var dbInitCmd = &cobra.Command{
 	Use:   "init",
@@ -30,6 +56,7 @@ func initDbCmd(rootCmd *cobra.Command) {
 	dbInitCmd.Flags().Bool("dry-run", false,
 		"set this flag to print actions without taking them")
 	dbCmd.AddCommand(dbInitCmd)
+	dbCmd.AddCommand(dbTestCmd)
 	rootCmd.AddCommand(dbCmd)
 }
 
