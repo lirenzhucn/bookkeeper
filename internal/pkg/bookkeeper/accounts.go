@@ -12,3 +12,13 @@ type Account struct {
 func (account *Account) Validate() bool {
 	return true
 }
+
+func GetSqlCreateAccounts() string {
+	return `create table accounts (
+		id   serial,
+		name text,
+		desc_ text,
+		tags text[],
+		primary key(id)
+	);`
+}
