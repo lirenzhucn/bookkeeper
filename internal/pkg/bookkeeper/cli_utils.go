@@ -2,13 +2,13 @@ package bookkeeper
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 )
 
 func InitConfigYaml(cmd *cobra.Command, configName string, cfgFile string) {
@@ -16,6 +16,8 @@ func InitConfigYaml(cmd *cobra.Command, configName string, cfgFile string) {
 }
 
 func InitConfig(cmd *cobra.Command, configName string, configType string, cfgFile string) {
+	sugar := zap.L().Sugar()
+	defer sugar.Sync()
 	if cfgFile != "" {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
@@ -32,7 +34,7 @@ func InitConfig(cmd *cobra.Command, configName string, configType string, cfgFil
 	viper.AutomaticEnv()
 	// Then use values in the config file
 	if err := viper.ReadInConfig(); err == nil {
-		log.Printf("Using config file: %s", viper.ConfigFileUsed())
+		sugar.Infow("Use config file", "configFile", viper.ConfigFileUsed())
 	}
 	// Manually bind flags
 	bindFlags(cmd)
