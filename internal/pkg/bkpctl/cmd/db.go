@@ -55,6 +55,8 @@ func initDbCmd(rootCmd *cobra.Command) {
 	dbCmd.PersistentFlags().StringP("db-url", "u", "", "Database URL")
 	dbInitCmd.Flags().Bool("dry-run", false,
 		"set this flag to print actions without taking them")
+	dbInitCmd.Flags().StringP("data-file", "d", "",
+		"path to initial data (default is empty)")
 	dbCmd.AddCommand(dbInitCmd)
 	dbCmd.AddCommand(dbTestCmd)
 	rootCmd.AddCommand(dbCmd)
@@ -71,12 +73,14 @@ func dbInit(cmd *cobra.Command, args []string) {
 		bookkeeper.MaskDbPassword(db_url))
 	dryRun, err := cmd.Flags().GetBool("dry-run")
 	cobra.CheckErr(err)
+	dataFile, err := cmd.Flags().GetString("data-file")
+	cobra.CheckErr(err)
 	var dbpool *pgxpool.Pool = nil
 	if !dryRun {
 		dbpool, err = pgxpool.Connect(context.Background(), db_url)
 		cobra.CheckErr(err)
 	}
-	commands, err := bookkeeper.InitDb(dbpool, dryRun)
+	commands, err := bookkeeper.InitDb(dbpool, dataFile, dryRun)
 	cobra.CheckErr(err)
 	if dryRun {
 		fmt.Println(

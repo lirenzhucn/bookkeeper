@@ -3,10 +3,10 @@ package bookkeeper
 // Notes on tags: use an array column and a GIN-index in Postgres is proven to
 // be faster than table join
 type Account struct {
-	Id   int      `json:"Id"`
-	Name string   `json:"Name"`
-	Desc string   `json:"Desc"`
-	Tags []string `json:"Tags"`
+	Id   int      `json:"id"`
+	Name string   `json:"name"`
+	Desc string   `json:"desc_"`
+	Tags []string `json:"tags"`
 }
 
 func (account *Account) Validate() bool {

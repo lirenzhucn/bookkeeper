@@ -3,15 +3,15 @@ package bookkeeper
 import "time"
 
 type Transaction struct {
-	Id            int       `json:"Id"`   // Unique id of the transaction
-	Type          string    `json:"Type"` // Transaction type, see validation for allowed values
-	Date          time.Time `json:"Date"`
-	Category      string    `json:"Category"`    // Tier 1 of the 2-tiered category
-	SubCategory   string    `json:"SubCategory"` // Tier 2 of the 2-tiered category
-	AccountId     int       `json:"AccountId"`
-	Amount        int64     `json:"Amount"`
-	Notes         string    `json:"Notes"`
-	AssociationId string    `json:"AssociationId"` // Links TransferIn with TransferOut
+	Id            int       `json:"id"`   // Unique id of the transaction
+	Type          string    `json:"type"` // Transaction type, see validation for allowed values
+	Date          time.Time `json:"date"`
+	Category      string    `json:"category"`     // Tier 1 of the 2-tiered category
+	SubCategory   string    `json:"sub_category"` // Tier 2 of the 2-tiered category
+	AccountId     int       `json:"account_id"`
+	Amount        int64     `json:"amount"`
+	Notes         string    `json:"notes"`
+	AssociationId string    `json:"association_id"` // Links TransferIn with TransferOut
 }
 
 var VALID_TRANSACTION_TYPES = []string{"TransferIn", "TransferOut", "In", "Out"}
