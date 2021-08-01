@@ -24,7 +24,7 @@ func GetSqlCreateTransactions() string {
 	return `create table transactions (
 		id             serial,
 		type           text,
-		date           time,
+		date           timestamp,
 		category       text,
 		sub_category   text,
 		account_id     int,
