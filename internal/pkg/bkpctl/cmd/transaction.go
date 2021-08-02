@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lensesio/tableprinter"
+	"github.com/kataras/tablewriter"
 	"github.com/lirenzhucn/bookkeeper/internal/pkg/bookkeeper"
 	"github.com/spf13/cobra"
 )
@@ -78,7 +78,6 @@ func lsTransactions(cmd *cobra.Command, args []string) {
 	if len(queryTerms) > 0 {
 		url += "?" + strings.Join(queryTerms, "&")
 	}
-	fmt.Println(url)
 
 	var transactions []bookkeeper.Transaction
 	resp, err := http.Get(url)
@@ -88,6 +87,23 @@ func lsTransactions(cmd *cobra.Command, args []string) {
 	cobra.CheckErr(err)
 	err = json.Unmarshal(body, &transactions)
 	cobra.CheckErr(err)
-	printer := tableprinter.New(os.Stdout)
-	printer.Print(transactions)
+	tablePrintTransactions(transactions)
+}
+
+func tablePrintTransactions(transactions []bookkeeper.Transaction) {
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{
+		"Id", "Type", "Date", "Category", "Sub-Category", "Account Id",
+		"Amount", "Notes", "Association Id",
+	})
+	for _, t := range transactions {
+		row := []string{
+			fmt.Sprintf("%d", t.Id), t.Type, t.Date.Format("2006/01/02"),
+			t.Category, t.SubCategory, fmt.Sprintf("%d", t.AccountId),
+			fmt.Sprintf("%.2f", float32(t.Amount)/100.0), t.Notes,
+			t.AssociationId,
+		}
+		table.Append(row)
+	}
+	table.Render()
 }

@@ -2,11 +2,13 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"strings"
 
-	"github.com/lensesio/tableprinter"
+	"github.com/kataras/tablewriter"
 	"github.com/lirenzhucn/bookkeeper/internal/pkg/bookkeeper"
 	"github.com/spf13/cobra"
 )
@@ -36,6 +38,15 @@ func lsAccounts(cmd *cobra.Command, args []string) {
 	cobra.CheckErr(err)
 	err = json.Unmarshal(body, &accounts)
 	cobra.CheckErr(err)
-	printer := tableprinter.New(os.Stdout)
-	printer.Print(accounts)
+	tablePrintAccounts(accounts)
+}
+
+func tablePrintAccounts(accounts []bookkeeper.Account) {
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Id", "Name", "Desc", "Tags"})
+	for _, a := range accounts {
+		row := []string{fmt.Sprintf("%d", a.Id), a.Name, a.Desc, strings.Join(a.Tags, ", ")}
+		table.Append(row)
+	}
+	table.Render()
 }
