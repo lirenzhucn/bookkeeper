@@ -42,11 +42,25 @@ func HandleRequests(port string, db_url string) {
 
 	// set up routes
 	myRouter := mux.NewRouter().StrictSlash(true)
-	myRouter.HandleFunc("/", homePage)
-	myRouter.HandleFunc("/accounts", returnAllAccounts)
-	myRouter.HandleFunc("/accounts/{id}", returnSingleAccount)
-	myRouter.HandleFunc("/transactions", returnAllTransactions)
-	myRouter.HandleFunc("/transactions/{id}", returnSingleTransaction)
+	myRouter.Path("/").
+		Methods("GET").
+		HandlerFunc(homePage)
+	myRouter.Path("/accounts").
+		Methods("GET").
+		HandlerFunc(returnAllAccounts)
+	myRouter.Path("/accounts/{id}").
+		Methods("GET").
+		HandlerFunc(returnSingleAccount)
+	myRouter.Path("/transactions").
+		Methods("GET").
+		Queries("startDate", "{startDate}", "endDate", "{endDate}").
+		HandlerFunc(returnTransactionsBetweenDates)
+	myRouter.Path("/transactions").
+		Methods("GET").
+		HandlerFunc(returnAllTransactions)
+	myRouter.Path("/transactions/{id}").
+		Methods("GET").
+		HandlerFunc(returnSingleTransaction)
 	err := http.ListenAndServe(":"+port, myRouter)
 	if err != nil {
 		sugar.Errorw("Web server failed", "error", err)
