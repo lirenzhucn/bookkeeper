@@ -20,4 +20,5 @@ func Execute() error {
 func Init() {
 	initDbCmd(rootCmd)
 	initAccountCmd(rootCmd)
+	initTransCmd(rootCmd)
 }
