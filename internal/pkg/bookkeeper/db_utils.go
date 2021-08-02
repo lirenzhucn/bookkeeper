@@ -77,7 +77,7 @@ func GetTransactionsBetweenDates(
 	rows, err := dbpool.Query(
 		context.Background(),
 		`select id, type, date, category, sub_category, account_id, amount, notes, association_id
-from transactions where date >= $1 and date < $2 order by date limit $3`,
+from transactions where date >= $1 and date < $2 order by date desc limit $3`,
 		start,
 		end,
 		limit,
@@ -113,7 +113,7 @@ func GetAllTransactions(dbpool *pgxpool.Pool, limit int, offset int) ([]Transact
 	rows, err := dbpool.Query(
 		context.Background(),
 		`select id, type, date, category, sub_category, account_id, amount, notes, association_id
-from transactions order by date limit $1 offset $2`,
+from transactions order by date desc limit $1 offset $2`,
 		limit,
 		offset,
 	)
