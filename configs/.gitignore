@@ -1,0 +1,3 @@
+# ignore all configs as they may contain sensitive info
+*
+!.gitignore

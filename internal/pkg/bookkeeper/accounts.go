@@ -1,25 +1,24 @@
 package bookkeeper
 
+// Notes on tags: use an array column and a GIN-index in Postgres is proven to
+// be faster than table join
 type Account struct {
-	Id       int    `json:"Id"`
-	Name     string `json:"Name"`
-	Type     string `json:"Type"`
-	Category string `json:"Category"`
-}
-
-var VALID_ACCOUNT_TYPES = []string{"Credit", "Debit"}
-var VALID_ACCOUNT_CATEGORIES = []string{"Asset", "Liability", "Revenue", "Expense"}
-
-func stringInList(s string, l []string) bool {
-	for _, ss := range l {
-		if s == ss {
-			return true
-		}
-	}
-	return false
+	Id   int      `json:"id"`
+	Name string   `json:"name"`
+	Desc string   `json:"desc_"`
+	Tags []string `json:"tags"`
 }
 
 func (account *Account) Validate() bool {
-	return stringInList(account.Type, VALID_ACCOUNT_TYPES) &&
-		stringInList(account.Category, VALID_ACCOUNT_CATEGORIES)
+	return true
+}
+
+func GetSqlCreateAccounts() string {
+	return `create table accounts (
+		id   serial,
+		name text,
+		desc_ text,
+		tags text[],
+		primary key(id)
+	);`
 }

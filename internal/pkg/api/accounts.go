@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -11,9 +10,16 @@ import (
 )
 
 var Accounts []bookkeeper.Account
+var MAX_NUM_RECORDS int = 1000
 
 func returnAllAccounts(w http.ResponseWriter, r *http.Request) {
-	json.NewEncoder(w).Encode(Accounts)
+	accounts, err := bookkeeper.GetAllAccounts(dbpool, MAX_NUM_RECORDS, 0)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(accounts)
 }
 
 func returnSingleAccount(w http.ResponseWriter, r *http.Request) {
@@ -23,18 +29,6 @@ func returnSingleAccount(w http.ResponseWriter, r *http.Request) {
 		if strconv.Itoa(account.Id) == key {
 			json.NewEncoder(w).Encode(account)
 			break
-		}
-	}
-}
-
-func PopulateAccounts() {
-	Accounts = []bookkeeper.Account{
-		{Id: 1, Name: "LZ Chase Checking", Type: "Debit", Category: "Asset"},
-		{Id: 2, Name: "LZ Chase Ultimate Freedom", Type: "Credit", Category: "Liability"},
-	}
-	for _, account := range Accounts {
-		if !account.Validate() {
-			fmt.Printf("Invalid account %d\n", account.Id)
 		}
 	}
 }
