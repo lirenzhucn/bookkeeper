@@ -3,6 +3,7 @@ package bookkeeper
 import (
 	"fmt"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -23,10 +24,11 @@ func InitConfig(cmd *cobra.Command, configName string, configType string, cfgFil
 		viper.SetConfigFile(cfgFile)
 	} else {
 		// Find the home directory
-		home, err := os.UserHomeDir()
+		cwd, err := os.Getwd()
+		configDir := path.Join(cwd, "configs")
 		cobra.CheckErr(err)
 		// Search config in home directory with name <configName>
-		viper.AddConfigPath(home)
+		viper.AddConfigPath(configDir)
 		viper.SetConfigType(configType)
 		viper.SetConfigName(configName)
 	}

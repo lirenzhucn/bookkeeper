@@ -51,7 +51,7 @@ var dbInitCmd = &cobra.Command{
 func initDbCmd(rootCmd *cobra.Command) {
 	cobra.OnInitialize(initDbConfig)
 	dbCmd.PersistentFlags().StringVar(&dbConfigFile, "config", "",
-		"config file (defualt is $HOME/.bkpctl_db.yaml)")
+		"config file (defualt is ./configs/.bkpctl_db.yaml)")
 	dbCmd.PersistentFlags().StringP("db-url", "u", "", "Database URL")
 	dbInitCmd.Flags().Bool("dry-run", false,
 		"set this flag to print actions without taking them")

@@ -23,7 +23,9 @@ keeping financial records and getting various reports.`,
 			"port", cmd.Flags().Lookup("port").Value.String())
 		port, err := cmd.Flags().GetInt("port")
 		cobra.CheckErr(err)
-		api.HandleRequests(fmt.Sprintf("%d", port))
+		db_url, err := cmd.Flags().GetString("db-url")
+		cobra.CheckErr(err)
+		api.HandleRequests(fmt.Sprintf("%d", port), db_url)
 	},
 }
 
@@ -34,8 +36,9 @@ func Execute() error {
 func Init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.Flags().StringVar(&cfgFile, "config", "",
-		"config file (default is $HOME/.bkpsrv.yaml)")
+		"config file (default is ./configs/.bkpsrv.yaml)")
 	rootCmd.Flags().IntP("port", "p", 10000, "the port of the server")
+	rootCmd.Flags().StringP("db-url", "d", "", "URL to the database service")
 }
 
 func initConfig() {
