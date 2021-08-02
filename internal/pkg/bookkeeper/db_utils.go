@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"time"
 
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -64,6 +65,66 @@ func InitDb(dbpool *pgxpool.Pool, dataFile string, dryRun bool) ([]string, error
 		}
 	}
 	return commands, err
+}
+
+func GetTransactionsBetweenDates(
+	dbpool *pgxpool.Pool, start time.Time, end time.Time, limit int,
+) ([]Transaction, error) {
+	return nil, nil
+}
+
+func GetAllTransactions(dbpool *pgxpool.Pool, limit int, offset int) ([]Transaction, error) {
+	var (
+		transactions []Transaction
+		curr         Transaction
+	)
+	rows, err := dbpool.Query(
+		context.Background(),
+		`select id, type, date, category, sub_category, account_id, amount, notes, association_id
+from transactions limit $1 offset $2`,
+		limit,
+		offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		if err := rows.Scan(
+			&curr.Id,
+			&curr.Type,
+			&curr.Date,
+			&curr.Category,
+			&curr.SubCategory,
+			&curr.AccountId,
+			&curr.Amount,
+			&curr.Notes,
+			&curr.AssociationId,
+		); err != nil {
+			return transactions, err
+		}
+		transactions = append(transactions, curr)
+	}
+	return transactions, nil
+}
+
+func GetAllAccounts(dbpool *pgxpool.Pool, limit int, offset int) ([]Account, error) {
+	var (
+		accounts []Account
+		curr     Account
+	)
+	rows, err := dbpool.Query(context.Background(), "select id, name, desc_, tags from accounts limit $1 offset $2", limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		if err := rows.Scan(&curr.Id, &curr.Name, &curr.Desc, &curr.Tags); err != nil {
+			return accounts, err
+		}
+		accounts = append(accounts, curr)
+	}
+	return accounts, nil
 }
 
 type DbDump struct {

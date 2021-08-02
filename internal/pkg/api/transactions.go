@@ -12,7 +12,13 @@ import (
 var Transactions []bookkeeper.Transaction
 
 func returnAllTransactions(w http.ResponseWriter, r *http.Request) {
-	json.NewEncoder(w).Encode(Transactions)
+	transactions, err := bookkeeper.GetAllTransactions(dbpool, MAX_NUM_RECORDS, 0)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(transactions)
 }
 
 func returnSingleTransaction(w http.ResponseWriter, r *http.Request) {
