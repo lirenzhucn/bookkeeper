@@ -11,10 +11,13 @@ var rootCmd = &cobra.Command{
 and manage the bookkeeper backend.`,
 }
 
+var BASE_URL = "http://localhost:10000/"
+
 func Execute() error {
 	return rootCmd.Execute()
 }
 
 func Init() {
 	initDbCmd(rootCmd)
+	initAccountCmd(rootCmd)
 }
