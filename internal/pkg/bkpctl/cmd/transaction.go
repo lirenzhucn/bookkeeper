@@ -2,9 +2,13 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"regexp"
+	"strings"
+	"time"
 
 	"github.com/lensesio/tableprinter"
 	"github.com/lirenzhucn/bookkeeper/internal/pkg/bookkeeper"
@@ -23,14 +27,61 @@ var transLsCmd = &cobra.Command{
 }
 
 func initTransCmd(rootCmd *cobra.Command) {
+	transLsCmd.Flags().StringP("start", "s", "", "Start date of the query YYYY/MM/DD")
+	transLsCmd.Flags().StringP("end", "e", "", "End date of the query YYYY/MM/DD")
 	transCmd.AddCommand(transLsCmd)
 	rootCmd.AddCommand(transCmd)
 }
 
+var dateRegex = regexp.MustCompile("[0-9]{4}/[0-9]{2}/[0-9]{2}")
+
+func validateDateStr(dateStr string) bool {
+	return dateRegex.Match([]byte(dateStr))
+}
+
 func lsTransactions(cmd *cobra.Command, args []string) {
 	var err error
+	var queryTerms []string
+	var url string
+
+	startDateStr, errStart := cmd.Flags().GetString("start")
+	endDateStr, errEnd := cmd.Flags().GetString("end")
+	if errEnd == nil && endDateStr != "" {
+		if validateDateStr(endDateStr) {
+			queryTerms = append(queryTerms, fmt.Sprintf("endDate=%s", endDateStr))
+		} else {
+			fmt.Println("End specified but is invalid. Will ignore.")
+			endDateStr = ""
+		}
+	}
+	if errStart == nil && startDateStr != "" {
+		if validateDateStr(startDateStr) {
+			queryTerms = append(queryTerms, fmt.Sprintf("startDate=%s", startDateStr))
+		} else {
+			fmt.Println("Start specified but is invalid. Will ignore.")
+			startDateStr = ""
+		}
+	}
+	switch {
+	case startDateStr == "" && endDateStr != "":
+		fmt.Println("Only end is specified! Will discard.")
+		queryTerms = nil
+	case startDateStr != "" && endDateStr == "":
+		fmt.Println("Only start is specified! Will use today as the end!")
+		queryTerms = append(
+			queryTerms,
+			fmt.Sprintf("endDate=%s", time.Now().Format("2006/01/02")),
+		)
+	}
+
+	url = BASE_URL + "transactions"
+	if len(queryTerms) > 0 {
+		url += "?" + strings.Join(queryTerms, "&")
+	}
+	fmt.Println(url)
+
 	var transactions []bookkeeper.Transaction
-	resp, err := http.Get(BASE_URL + "transactions")
+	resp, err := http.Get(url)
 	cobra.CheckErr(err)
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
