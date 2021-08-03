@@ -4,14 +4,13 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/lirenzhucn/bookkeeper/internal/pkg/bookkeeper"
 	"go.uber.org/zap"
 )
-
-var Transactions []bookkeeper.Transaction
 
 func returnTransactionsBetweenDates(w http.ResponseWriter, r *http.Request) {
 	sugar := zap.L().Sugar()
@@ -57,12 +56,26 @@ func returnAllTransactions(w http.ResponseWriter, r *http.Request) {
 }
 
 func returnSingleTransaction(w http.ResponseWriter, r *http.Request) {
+	sugar := zap.L().Sugar()
+	defer sugar.Sync()
+
 	vars := mux.Vars(r)
 	key := vars["id"]
-	for _, transaction := range Transactions {
-		if strconv.Itoa(transaction.Id) == key {
-			json.NewEncoder(w).Encode(transaction)
-			break
-		}
+	id, err := strconv.Atoi(key)
+	if err != nil {
+		http.Error(w, "Invalid id in query", 400)
+		return
 	}
+	transaction, err := bookkeeper.GetSingleTransaction(dbpool, id)
+	if err != nil {
+		if strings.Contains(err.Error(), "no rows in result set") {
+			http.Error(w, "Transaction not found", 404)
+		} else {
+			http.Error(w, "Internal server error", 500)
+			sugar.Errorw("failed to get transaction", "transaction_id", id, "error", err)
+		}
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(transaction)
 }

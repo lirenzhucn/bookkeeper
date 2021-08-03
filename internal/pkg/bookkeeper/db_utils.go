@@ -168,6 +168,32 @@ func GetAllAccounts(dbpool *pgxpool.Pool, limit int, offset int) ([]Account, err
 	return accounts, nil
 }
 
+func GetSingleAccount(dbpool *pgxpool.Pool, id int) (Account, error) {
+	var account Account
+	row := dbpool.QueryRow(context.Background(), "select id, name, desc_, tags from accounts where id = $1", id)
+	err := row.Scan(&account.Id, &account.Name, &account.Desc, &account.Tags)
+	return account, err
+}
+
+func GetSingleTransaction(dbpool *pgxpool.Pool, id int) (Transaction_, error) {
+	var transaction Transaction_
+	row := dbpool.QueryRow(
+		context.Background(),
+		`select t.id, type, date, category, sub_category, account_id, amount, notes, association_id, a.name
+from transaction t
+inner join accounts a on t.account_id = a.id
+where t.id = $1`,
+		id,
+	)
+	err := row.Scan(
+		&transaction.Id, &transaction.Type, &transaction.Date,
+		&transaction.Category, &transaction.SubCategory, &transaction.AccountId,
+		&transaction.Amount, &transaction.Notes, &transaction.AssociationId,
+		&transaction.AccountName,
+	)
+	return transaction, err
+}
+
 type DbDump struct {
 	Accounts     []Account     `json:"accounts"`
 	Transactions []Transaction `json:"transactions"`

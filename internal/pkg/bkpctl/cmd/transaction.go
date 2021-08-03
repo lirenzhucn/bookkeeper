@@ -40,9 +40,11 @@ func validateDateStr(dateStr string) bool {
 }
 
 func lsTransactions(cmd *cobra.Command, args []string) {
-	var err error
-	var queryTerms []string
-	var url string
+	var (
+		err        error
+		queryTerms []string
+		url        string
+	)
 
 	startDateStr, errStart := cmd.Flags().GetString("start")
 	endDateStr, errEnd := cmd.Flags().GetString("end")
