@@ -240,6 +240,33 @@ func DeleteAccount(dbpool *pgxpool.Pool, account_id int) error {
 	return err
 }
 
+func InsertTransaction(dbpool *pgxpool.Pool, trans *Transaction) error {
+	row := dbpool.QueryRow(
+		context.Background(),
+		`insert into transactions
+(type, date, category, sub_category, account_id, amount, notes, association_id)
+values ($1, $2, $3, $4, $5, $6, $7, $8)
+returning id, type, date, category, sub_category, account_id, amount, notes, association_id`,
+		trans.Type, trans.Date, trans.Category, trans.SubCategory,
+		trans.AccountId, trans.Amount, trans.Notes, trans.AssociationId,
+	)
+	err := row.Scan(
+		&trans.Id, &trans.Type, &trans.Date, &trans.Category,
+		&trans.SubCategory, &trans.AccountId, &trans.Amount, &trans.Notes,
+		&trans.AssociationId,
+	)
+	return err
+}
+
+func DeleteTransaction(dbpool *pgxpool.Pool, trans_id int) error {
+	_, err := dbpool.Exec(
+		context.Background(),
+		"delete from transactions where id = $1",
+		trans_id,
+	)
+	return err
+}
+
 type DbDump struct {
 	Accounts     []Account     `json:"accounts"`
 	Transactions []Transaction `json:"transactions"`

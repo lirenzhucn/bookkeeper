@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
@@ -78,4 +79,54 @@ func returnSingleTransaction(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(transaction)
+}
+
+func postTransaction(w http.ResponseWriter, r *http.Request) {
+	postOrPatchTransaction(w, r, -1)
+}
+
+func patchTransaction(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["id"])
+	if !checkErr(err, w, 400, "Invalid transaction id provided") {
+		return
+	}
+	postOrPatchTransaction(w, r, id)
+}
+
+func postOrPatchTransaction(w http.ResponseWriter, r *http.Request, transId int) {
+	var trans bookkeeper.Transaction
+
+	body, err := ioutil.ReadAll(r.Body)
+	if !checkErr(err, w, 400, "Failed to read the request body") {
+		return
+	}
+	err = json.Unmarshal(body, &trans)
+	if !checkErr(err, w, 400, "Failed to parse the request body") {
+		return
+	}
+
+	if transId < 0 {
+		err := bookkeeper.InsertTransaction(dbpool, &trans)
+		if !checkErr(err, w, 500, "Failed to insert account") {
+			return
+		}
+		json.NewEncoder(w).Encode(trans)
+	} else {
+		// err := bookkeeper.UpdateTransaction(dbpool, &trans)
+		http.Error(w, "PATCH not implemented", 404)
+		return
+	}
+}
+
+func deleteTransaction(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["id"])
+	if !checkErr(err, w, 400, "Invalid account id provided") {
+		return
+	}
+	err = bookkeeper.DeleteTransaction(dbpool, id)
+	if !checkErr(err, w, 500, "Failed to update account", "accout_id", id) {
+		return
+	}
 }
