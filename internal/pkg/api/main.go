@@ -51,6 +51,15 @@ func HandleRequests(port string, db_url string) {
 	myRouter.Path("/accounts/{id}").
 		Methods("GET").
 		HandlerFunc(returnSingleAccount)
+	myRouter.Path("/accounts").
+		Methods("POST").
+		HandlerFunc(postAccount)
+	myRouter.Path("/accounts/{id}").
+		Methods("PATCH").
+		HandlerFunc(patchAccount)
+	myRouter.Path("/accounts/{id}").
+		Methods("DELETE").
+		HandlerFunc(deleteAccount)
 	myRouter.Path("/transactions").
 		Methods("GET").
 		Queries("startDate", "{startDate}", "endDate", "{endDate}").

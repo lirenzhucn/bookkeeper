@@ -63,6 +63,21 @@ func InitDb(dbpool *pgxpool.Pool, dataFile string, dryRun bool) ([]string, error
 		if err := insertTransactions(tx, dbDump.Transactions); err != nil {
 			return commands, err
 		}
+		// reset sequence counts
+		_, err = tx.Exec(
+			context.Background(),
+			"select setval('accounts_id_seq', coalesce((select max(id)+1 from accounts), 1), false)",
+		)
+		if err != nil {
+			return commands, err
+		}
+		_, err = tx.Exec(
+			context.Background(),
+			"select setval('transactions_id_seq', coalesce((select max(id)+1 from transactions), 1), false)",
+		)
+		if err != nil {
+			return commands, err
+		}
 	}
 	return commands, err
 }
@@ -192,6 +207,37 @@ where t.id = $1`,
 		&transaction.AccountName,
 	)
 	return transaction, err
+}
+
+func InsertAccount(dbpool *pgxpool.Pool, account *Account) error {
+	row := dbpool.QueryRow(
+		context.Background(),
+		`insert into accounts (name, desc_, tags) values ($1, $2, $3)
+returning id, name, desc_, tags`,
+		account.Name, account.Desc, account.Tags,
+	)
+	err := row.Scan(&account.Id, &account.Name, &account.Desc, &account.Tags)
+	return err
+}
+
+func UpdateAccount(dbpool *pgxpool.Pool, account *Account) error {
+	row := dbpool.QueryRow(
+		context.Background(),
+		`update accounts set name = $1, desc_ = $2, tags = $3 where id = $4
+returning id, name, desc_, tags`,
+		account.Name, account.Desc, account.Tags, account.Id,
+	)
+	err := row.Scan(&account.Id, &account.Name, &account.Desc, &account.Tags)
+	return err
+}
+
+func DeleteAccount(dbpool *pgxpool.Pool, account_id int) error {
+	_, err := dbpool.Exec(
+		context.Background(),
+		"delete from accounts where id = $1",
+		account_id,
+	)
+	return err
 }
 
 type DbDump struct {

@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
@@ -46,4 +47,66 @@ func returnSingleAccount(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(account)
+}
+
+func postAccount(w http.ResponseWriter, r *http.Request) {
+	postOrPatchAccount(w, r, -1)
+}
+
+func patchAccount(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["id"])
+	if !checkErr(err, w, 400, "Invalid account id provided") {
+		return
+	}
+	postOrPatchAccount(w, r, id)
+}
+
+func postOrPatchAccount(w http.ResponseWriter, r *http.Request, accountId int) {
+	var account bookkeeper.Account
+
+	body, err := ioutil.ReadAll(r.Body)
+	if !checkErr(err, w, 400, "Failed to read the request body") {
+		return
+	}
+	err = json.Unmarshal(body, &account)
+	if !checkErr(err, w, 400, "Failed to parse the request body as a JSON string") {
+		return
+	}
+
+	if accountId < 0 {
+		err := bookkeeper.InsertAccount(dbpool, &account)
+		if !checkErr(err, w, 500, "Failed to insert account") {
+			return
+		}
+		json.NewEncoder(w).Encode(account)
+	} else {
+		// overwrite the id in the payload
+		account.Id = accountId
+		err := bookkeeper.UpdateAccount(dbpool, &account)
+		if err != nil && strings.Contains(err.Error(), "no rows in result set") {
+			http.Error(w, "Cannot find account with the specified id", 404)
+			return
+		}
+		if !checkErr(err, w, 500, "Failed to update account", "accout_id", accountId) {
+			return
+		}
+		json.NewEncoder(w).Encode(account)
+	}
+}
+
+func deleteAccount(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["id"])
+	if !checkErr(err, w, 400, "Invalid account id provided") {
+		return
+	}
+	err = bookkeeper.DeleteAccount(dbpool, id)
+	if err != nil && strings.Contains(err.Error(), "violates foreign key constraint") {
+		http.Error(w, "Failed to update account. Account may be referenced by a transaction.", 500)
+		return
+	}
+	if !checkErr(err, w, 500, "Failed to update account", "accout_id", id) {
+		return
+	}
 }
