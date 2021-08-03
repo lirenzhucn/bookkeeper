@@ -14,6 +14,11 @@ type Transaction struct {
 	AssociationId string    `json:"association_id"` // Links TransferIn with TransferOut
 }
 
+type Transaction_ struct {
+	Transaction
+	AccountName string `json:"account_name"`
+}
+
 var VALID_TRANSACTION_TYPES = []string{"TransferIn", "TransferOut", "In", "Out"}
 
 func (trans Transaction) Validate() bool {

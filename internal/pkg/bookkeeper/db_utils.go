@@ -69,15 +69,19 @@ func InitDb(dbpool *pgxpool.Pool, dataFile string, dryRun bool) ([]string, error
 
 func GetTransactionsBetweenDates(
 	dbpool *pgxpool.Pool, start time.Time, end time.Time, limit int,
-) ([]Transaction, error) {
+) ([]Transaction_, error) {
 	var (
-		transactions []Transaction
-		curr         Transaction
+		transactions []Transaction_
+		curr         Transaction_
 	)
 	rows, err := dbpool.Query(
 		context.Background(),
-		`select id, type, date, category, sub_category, account_id, amount, notes, association_id
-from transactions where date >= $1 and date < $2 order by date desc limit $3`,
+		`select t.id, type, date, category, sub_category, account_id, amount, notes, association_id, a.name
+from transactions t
+inner join accounts a on t.account_id = a.id
+where date >= $1 and date < $2
+order by date desc
+limit $3`,
 		start,
 		end,
 		limit,
@@ -97,6 +101,7 @@ from transactions where date >= $1 and date < $2 order by date desc limit $3`,
 			&curr.Amount,
 			&curr.Notes,
 			&curr.AssociationId,
+			&curr.AccountName,
 		); err != nil {
 			return transactions, err
 		}
@@ -105,15 +110,18 @@ from transactions where date >= $1 and date < $2 order by date desc limit $3`,
 	return transactions, nil
 }
 
-func GetAllTransactions(dbpool *pgxpool.Pool, limit int, offset int) ([]Transaction, error) {
+func GetAllTransactions(dbpool *pgxpool.Pool, limit int, offset int) ([]Transaction_, error) {
 	var (
-		transactions []Transaction
-		curr         Transaction
+		transactions []Transaction_
+		curr         Transaction_
 	)
 	rows, err := dbpool.Query(
 		context.Background(),
-		`select id, type, date, category, sub_category, account_id, amount, notes, association_id
-from transactions order by date desc limit $1 offset $2`,
+		`select t.id, type, date, category, sub_category, account_id, amount, notes, association_id, a.name
+from transactions t
+inner join accounts a on t.account_id = a.id
+order by date desc
+limit $1 offset $2`,
 		limit,
 		offset,
 	)
@@ -132,6 +140,7 @@ from transactions order by date desc limit $1 offset $2`,
 			&curr.Amount,
 			&curr.Notes,
 			&curr.AssociationId,
+			&curr.AccountName,
 		); err != nil {
 			return transactions, err
 		}
