@@ -10,7 +10,9 @@ type Account struct {
 }
 
 func (account *Account) Validate() bool {
-	return true
+	valid := stringInList("asset", account.Tags) ||
+		stringInList("liability", account.Tags)
+	return valid
 }
 
 func GetSqlCreateAccounts() string {

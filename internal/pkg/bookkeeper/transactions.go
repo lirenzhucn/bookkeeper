@@ -1,6 +1,9 @@
 package bookkeeper
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 type Transaction struct {
 	Id            int       `json:"id"`   // Unique id of the transaction
@@ -14,10 +17,24 @@ type Transaction struct {
 	AssociationId string    `json:"association_id"` // Links TransferIn with TransferOut
 }
 
-var VALID_TRANSACTION_TYPES = []string{"TransferIn", "TransferOut", "In", "Out"}
+type Transaction_ struct {
+	Transaction
+	AccountName string `json:"account_name"`
+}
+
+var VALID_TRANSACTION_TYPES = []string{
+	"TransferIn", "TransferOut", "In", "Out", "BalanceChange", "LiabilityChange",
+}
 
 func (trans Transaction) Validate() bool {
-	return stringInList(trans.Type, VALID_TRANSACTION_TYPES)
+	valid := stringInList(trans.Type, VALID_TRANSACTION_TYPES)
+	switch {
+	case strings.HasPrefix(trans.Type, "Transfer"):
+		valid = valid && trans.AssociationId != ""
+	case trans.Type == "In" || trans.Type == "Out":
+		valid = valid && trans.Category != "" && trans.SubCategory != ""
+	}
+	return valid
 }
 
 func GetSqlCreateTransactions() string {

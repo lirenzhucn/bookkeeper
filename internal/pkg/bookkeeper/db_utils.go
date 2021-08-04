@@ -63,21 +63,40 @@ func InitDb(dbpool *pgxpool.Pool, dataFile string, dryRun bool) ([]string, error
 		if err := insertTransactions(tx, dbDump.Transactions); err != nil {
 			return commands, err
 		}
+		// reset sequence counts
+		_, err = tx.Exec(
+			context.Background(),
+			"select setval('accounts_id_seq', coalesce((select max(id)+1 from accounts), 1), false)",
+		)
+		if err != nil {
+			return commands, err
+		}
+		_, err = tx.Exec(
+			context.Background(),
+			"select setval('transactions_id_seq', coalesce((select max(id)+1 from transactions), 1), false)",
+		)
+		if err != nil {
+			return commands, err
+		}
 	}
 	return commands, err
 }
 
 func GetTransactionsBetweenDates(
 	dbpool *pgxpool.Pool, start time.Time, end time.Time, limit int,
-) ([]Transaction, error) {
+) ([]Transaction_, error) {
 	var (
-		transactions []Transaction
-		curr         Transaction
+		transactions []Transaction_
+		curr         Transaction_
 	)
 	rows, err := dbpool.Query(
 		context.Background(),
-		`select id, type, date, category, sub_category, account_id, amount, notes, association_id
-from transactions where date >= $1 and date < $2 order by date desc limit $3`,
+		`select t.id, type, date, category, sub_category, account_id, amount, notes, association_id, a.name
+from transactions t
+inner join accounts a on t.account_id = a.id
+where date >= $1 and date < $2
+order by date desc
+limit $3`,
 		start,
 		end,
 		limit,
@@ -97,6 +116,7 @@ from transactions where date >= $1 and date < $2 order by date desc limit $3`,
 			&curr.Amount,
 			&curr.Notes,
 			&curr.AssociationId,
+			&curr.AccountName,
 		); err != nil {
 			return transactions, err
 		}
@@ -105,15 +125,18 @@ from transactions where date >= $1 and date < $2 order by date desc limit $3`,
 	return transactions, nil
 }
 
-func GetAllTransactions(dbpool *pgxpool.Pool, limit int, offset int) ([]Transaction, error) {
+func GetAllTransactions(dbpool *pgxpool.Pool, limit int, offset int) ([]Transaction_, error) {
 	var (
-		transactions []Transaction
-		curr         Transaction
+		transactions []Transaction_
+		curr         Transaction_
 	)
 	rows, err := dbpool.Query(
 		context.Background(),
-		`select id, type, date, category, sub_category, account_id, amount, notes, association_id
-from transactions order by date desc limit $1 offset $2`,
+		`select t.id, type, date, category, sub_category, account_id, amount, notes, association_id, a.name
+from transactions t
+inner join accounts a on t.account_id = a.id
+order by date desc
+limit $1 offset $2`,
 		limit,
 		offset,
 	)
@@ -132,6 +155,7 @@ from transactions order by date desc limit $1 offset $2`,
 			&curr.Amount,
 			&curr.Notes,
 			&curr.AssociationId,
+			&curr.AccountName,
 		); err != nil {
 			return transactions, err
 		}
@@ -157,6 +181,90 @@ func GetAllAccounts(dbpool *pgxpool.Pool, limit int, offset int) ([]Account, err
 		accounts = append(accounts, curr)
 	}
 	return accounts, nil
+}
+
+func GetSingleAccount(dbpool *pgxpool.Pool, id int) (Account, error) {
+	var account Account
+	row := dbpool.QueryRow(context.Background(), "select id, name, desc_, tags from accounts where id = $1", id)
+	err := row.Scan(&account.Id, &account.Name, &account.Desc, &account.Tags)
+	return account, err
+}
+
+func GetSingleTransaction(dbpool *pgxpool.Pool, id int) (Transaction_, error) {
+	var transaction Transaction_
+	row := dbpool.QueryRow(
+		context.Background(),
+		`select t.id, type, date, category, sub_category, account_id, amount, notes, association_id, a.name
+from transaction t
+inner join accounts a on t.account_id = a.id
+where t.id = $1`,
+		id,
+	)
+	err := row.Scan(
+		&transaction.Id, &transaction.Type, &transaction.Date,
+		&transaction.Category, &transaction.SubCategory, &transaction.AccountId,
+		&transaction.Amount, &transaction.Notes, &transaction.AssociationId,
+		&transaction.AccountName,
+	)
+	return transaction, err
+}
+
+func InsertAccount(dbpool *pgxpool.Pool, account *Account) error {
+	row := dbpool.QueryRow(
+		context.Background(),
+		`insert into accounts (name, desc_, tags) values ($1, $2, $3)
+returning id, name, desc_, tags`,
+		account.Name, account.Desc, account.Tags,
+	)
+	err := row.Scan(&account.Id, &account.Name, &account.Desc, &account.Tags)
+	return err
+}
+
+func UpdateAccount(dbpool *pgxpool.Pool, account *Account) error {
+	row := dbpool.QueryRow(
+		context.Background(),
+		`update accounts set name = $1, desc_ = $2, tags = $3 where id = $4
+returning id, name, desc_, tags`,
+		account.Name, account.Desc, account.Tags, account.Id,
+	)
+	err := row.Scan(&account.Id, &account.Name, &account.Desc, &account.Tags)
+	return err
+}
+
+func DeleteAccount(dbpool *pgxpool.Pool, account_id int) error {
+	_, err := dbpool.Exec(
+		context.Background(),
+		"delete from accounts where id = $1",
+		account_id,
+	)
+	return err
+}
+
+func InsertTransaction(dbpool *pgxpool.Pool, trans *Transaction) error {
+	row := dbpool.QueryRow(
+		context.Background(),
+		`insert into transactions
+(type, date, category, sub_category, account_id, amount, notes, association_id)
+values ($1, $2, $3, $4, $5, $6, $7, $8)
+returning id, type, date, category, sub_category, account_id, amount, notes, association_id`,
+		trans.Type, trans.Date, trans.Category, trans.SubCategory,
+		trans.AccountId, trans.Amount, trans.Notes, trans.AssociationId,
+	)
+	err := row.Scan(
+		&trans.Id, &trans.Type, &trans.Date, &trans.Category,
+		&trans.SubCategory, &trans.AccountId, &trans.Amount, &trans.Notes,
+		&trans.AssociationId,
+	)
+	return err
+}
+
+func DeleteTransaction(dbpool *pgxpool.Pool, trans_id int) error {
+	_, err := dbpool.Exec(
+		context.Background(),
+		"delete from transactions where id = $1",
+		trans_id,
+	)
+	return err
 }
 
 type DbDump struct {

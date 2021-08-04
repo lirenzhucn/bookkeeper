@@ -40,9 +40,11 @@ func validateDateStr(dateStr string) bool {
 }
 
 func lsTransactions(cmd *cobra.Command, args []string) {
-	var err error
-	var queryTerms []string
-	var url string
+	var (
+		err        error
+		queryTerms []string
+		url        string
+	)
 
 	startDateStr, errStart := cmd.Flags().GetString("start")
 	endDateStr, errEnd := cmd.Flags().GetString("end")
@@ -79,7 +81,7 @@ func lsTransactions(cmd *cobra.Command, args []string) {
 		url += "?" + strings.Join(queryTerms, "&")
 	}
 
-	var transactions []bookkeeper.Transaction
+	var transactions []bookkeeper.Transaction_
 	resp, err := http.Get(url)
 	cobra.CheckErr(err)
 	defer resp.Body.Close()
@@ -90,16 +92,16 @@ func lsTransactions(cmd *cobra.Command, args []string) {
 	tablePrintTransactions(transactions)
 }
 
-func tablePrintTransactions(transactions []bookkeeper.Transaction) {
+func tablePrintTransactions(transactions []bookkeeper.Transaction_) {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{
-		"Id", "Type", "Date", "Category", "Sub-Category", "Account Id",
+		"Id", "Type", "Date", "Category", "Sub-Category", "Account Name",
 		"Amount", "Notes", "Association Id",
 	})
 	for _, t := range transactions {
 		row := []string{
 			fmt.Sprintf("%d", t.Id), t.Type, t.Date.Format("2006/01/02"),
-			t.Category, t.SubCategory, fmt.Sprintf("%d", t.AccountId),
+			t.Category, t.SubCategory, t.AccountName,
 			fmt.Sprintf("%.2f", float32(t.Amount)/100.0), t.Notes,
 			t.AssociationId,
 		}
