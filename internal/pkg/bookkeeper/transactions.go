@@ -19,7 +19,9 @@ type Transaction_ struct {
 	AccountName string `json:"account_name"`
 }
 
-var VALID_TRANSACTION_TYPES = []string{"TransferIn", "TransferOut", "In", "Out"}
+var VALID_TRANSACTION_TYPES = []string{
+	"TransferIn", "TransferOut", "In", "Out", "BalanceChange", "LiabilityChange",
+}
 
 func (trans Transaction) Validate() bool {
 	return stringInList(trans.Type, VALID_TRANSACTION_TYPES)
