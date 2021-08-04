@@ -8,11 +8,6 @@ import (
 	"github.com/lirenzhucn/bookkeeper/internal/pkg/bookkeeper"
 )
 
-type AccountWithBalance struct {
-	bookkeeper.Account
-	Balance int64 `json:"Balance"`
-}
-
 func getAccountBalanceOn(w http.ResponseWriter, r *http.Request) {
 	accountName := r.FormValue("accountName")
 	dateStr := r.FormValue("date")
@@ -32,6 +27,6 @@ func getAccountBalanceOn(w http.ResponseWriter, r *http.Request) {
 		"accountName", accountName) {
 		return
 	}
-	account_ := AccountWithBalance{account, balance}
+	account_ := bookkeeper.AccountWithBalance{Account: account, Balance: balance}
 	json.NewEncoder(w).Encode(account_)
 }

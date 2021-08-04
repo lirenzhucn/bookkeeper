@@ -8,6 +8,11 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
+type AccountWithBalance struct {
+	Account
+	Balance int64 `json:"Balance"`
+}
+
 func ComputeAccountBalance(
 	dbpool *pgxpool.Pool, accountName string, date time.Time,
 ) (Account, int64, error) {
