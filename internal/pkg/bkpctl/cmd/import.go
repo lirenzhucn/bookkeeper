@@ -237,6 +237,10 @@ func createTransactionFromRowForSui(
 		if len(notes) > 0 {
 			trans.Notes = strings.Join(notes, "; ")
 		}
+		if trans.Type == "TransferOut" || trans.Type == "Out" ||
+			trans.Type == "LiabilityChange" {
+			trans.Amount = -trans.Amount
+		}
 	}
 	return trans, nil
 }
