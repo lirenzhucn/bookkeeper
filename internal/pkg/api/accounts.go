@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -71,6 +72,13 @@ func postOrPatchAccount(w http.ResponseWriter, r *http.Request, accountId int) {
 	}
 	err = json.Unmarshal(body, &account)
 	if !checkErr(err, w, 400, "Failed to parse the request body as a JSON string") {
+		return
+	}
+	if !account.Validate() {
+		checkErr(
+			fmt.Errorf("validation of account failed"), w, 400,
+			"Invalid account payload", "account", account,
+		)
 		return
 	}
 

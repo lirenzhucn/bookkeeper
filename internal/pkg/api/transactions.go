@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -103,6 +104,13 @@ func postOrPatchTransaction(w http.ResponseWriter, r *http.Request, transId int)
 	}
 	err = json.Unmarshal(body, &trans)
 	if !checkErr(err, w, 400, "Failed to parse the request body") {
+		return
+	}
+	if !trans.Validate() {
+		checkErr(
+			fmt.Errorf("validation of transaction failed"), w, 400,
+			"Invalid account payload", "transaction", trans,
+		)
 		return
 	}
 

@@ -94,6 +94,10 @@ func postAccounts(accountMap *map[string]bookkeeper.Account) error {
 			return err
 		}
 		defer resp.Body.Close()
+		if resp.StatusCode != 200 {
+			return fmt.Errorf(
+				"failed to insert account with name %s", account.Name)
+		}
 		json.NewDecoder(resp.Body).Decode(&newAccount)
 		(*accountMap)[key] = newAccount
 	}
@@ -159,6 +163,9 @@ func postSingleTransaction(trans bookkeeper.Transaction) (bookkeeper.Transaction
 		return trans, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return trans, fmt.Errorf("failed to insert transaction")
+	}
 	json.NewDecoder(resp.Body).Decode(&newTrans)
 	return newTrans, nil
 }

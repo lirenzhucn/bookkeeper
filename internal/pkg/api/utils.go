@@ -12,7 +12,9 @@ func checkErr(err error, w http.ResponseWriter, statusCode int,
 	defer sugar.Sync()
 
 	if err != nil {
-		sugar.Errorw(msg, "error", err, a)
+		a = append(a, "error")
+		a = append(a, err)
+		sugar.Errorw(msg, a...)
 		var outMsg = msg
 		if statusCode == 500 {
 			outMsg = "Internal Server Error"
