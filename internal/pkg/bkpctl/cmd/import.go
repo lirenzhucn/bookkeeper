@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/lirenzhucn/bookkeeper/internal/pkg/bookkeeper"
@@ -173,6 +174,7 @@ func createTransactionFromRowForSui(
 	)
 	for i, key := range keys {
 		value := record[i]
+		var notes []string
 		switch key {
 		case "交易类型":
 			trans.Type, ok = config.TransactionTypes[value]
@@ -216,6 +218,17 @@ func createTransactionFromRowForSui(
 			trans.Amount = int64(amountFloat * 100)
 		case "关联Id":
 			trans.AssociationId = value
+		case "备注":
+			if value != "" {
+				notes = append(notes, value)
+			}
+		case "商家":
+			if value != "" {
+				notes = append(notes, value)
+			}
+		}
+		if len(notes) > 0 {
+			trans.Notes = strings.Join(notes, "; ")
 		}
 	}
 	return trans, nil
