@@ -82,6 +82,11 @@ func HandleRequests(port string, db_url string) {
 	myRouter.Path("/transactions/{id}").
 		Methods("DELETE").
 		HandlerFunc(deleteTransaction)
+	// reporting
+	myRouter.Path("/reporting/account_balance").
+		Methods("GET").
+		Queries("accountName", "{accountName}", "date", "{date}").
+		HandlerFunc(getAccountBalanceOn)
 	err := http.ListenAndServe(":"+port, myRouter)
 	if err != nil {
 		sugar.Errorw("Web server failed", "error", err)

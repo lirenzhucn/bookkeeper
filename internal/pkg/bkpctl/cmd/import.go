@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -170,6 +171,8 @@ func postSingleTransaction(trans bookkeeper.Transaction) (bookkeeper.Transaction
 	return newTrans, nil
 }
 
+var rAmount = regexp.MustCompile(`^[+/-]?[0-9]+\.[0-9]{2}`)
+
 func createTransactionFromRowForSui(
 	record []string, keys []string, config *ImportConfig,
 ) (bookkeeper.Transaction, error) {
@@ -218,11 +221,14 @@ func createTransactionFromRowForSui(
 			}
 			trans.AccountId = account.Id
 		case "金额":
-			amountFloat, err := strconv.ParseFloat(value, 64)
+			if !rAmount.MatchString(value) {
+				return trans, fmt.Errorf("invalid amount string %s", value)
+			}
+			value = strings.ReplaceAll(value, ".", "")
+			trans.Amount, err = strconv.ParseInt(value, 10, 64)
 			if err != nil {
 				return trans, err
 			}
-			trans.Amount = int64(amountFloat * 100)
 		case "关联Id":
 			trans.AssociationId = value
 		case "备注":
@@ -236,6 +242,10 @@ func createTransactionFromRowForSui(
 		}
 		if len(notes) > 0 {
 			trans.Notes = strings.Join(notes, "; ")
+		}
+		if trans.Type == "TransferOut" || trans.Type == "Out" ||
+			trans.Type == "LiabilityChange" {
+			trans.Amount = -trans.Amount
 		}
 	}
 	return trans, nil
