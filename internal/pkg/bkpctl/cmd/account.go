@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kataras/tablewriter"
 	"github.com/leekchan/accounting"
 	"github.com/lirenzhucn/bookkeeper/internal/pkg/bookkeeper"
+	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
