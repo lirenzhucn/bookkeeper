@@ -36,23 +36,29 @@ func getAllAccountsBalanceOnDate(w http.ResponseWriter, r *http.Request) {
 }
 
 func getBalanceSheet(w http.ResponseWriter, r *http.Request) {
-	date, ok := parseDateTimeInQueryAndFail(w, r, "date")
+	var balanceSheets []bookkeeper.BalanceSheet
+	dates, ok := parseMultipleDateTimesInQueryAndFail(w, r, "date")
 	if !ok {
-		return
-	}
-	accounts, err := bookkeeper.GetAllAccountsBalanceOnDate(dbpool, date)
-	if !checkErr(err, w, 500, "Failed to get the balance of all accounts",
-		"error", err) {
 		return
 	}
 	assetTags, ok := parseTagsInQueryAndFail(w, r, "assetTags")
 	if !ok {
-		http.Error(w, "Failed to parse assetTags", 400)
+		return
 	}
 	liabilityTags, ok := parseTagsInQueryAndFail(w, r, "liabilityTags")
 	if !ok {
-		http.Error(w, "Failed to parse liabilityTags", 400)
+		return
 	}
-	balanceSheet := bookkeeper.ComputeBalanceSheet(accounts, assetTags, liabilityTags)
-	json.NewEncoder(w).Encode(balanceSheet)
+	for _, date := range dates {
+		accounts, err := bookkeeper.GetAllAccountsBalanceOnDate(dbpool, date)
+		if !checkErr(err, w, 500, "Failed to get the balance of all accounts",
+			"error", err) {
+			return
+		}
+		balanceSheets = append(
+			balanceSheets,
+			bookkeeper.ComputeBalanceSheet(accounts, assetTags, liabilityTags),
+		)
+	}
+	json.NewEncoder(w).Encode(balanceSheets)
 }

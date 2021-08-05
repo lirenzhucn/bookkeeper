@@ -119,9 +119,9 @@ func generateBalanceSheet(cmd *cobra.Command, args []string) {
 	resp, err := http.Get(url_)
 	cobra.CheckErr(err)
 	defer resp.Body.Close()
-	var balanceSheet bookkeeper.BalanceSheet
-	json.NewDecoder(resp.Body).Decode(&balanceSheet)
-	err = printBalanceSheet(balanceSheet, reportSchema, dateStr)
+	var balanceSheets []bookkeeper.BalanceSheet
+	json.NewDecoder(resp.Body).Decode(&balanceSheets)
+	err = printBalanceSheets(balanceSheets, reportSchema, dateStr)
 	cobra.CheckErr(err)
 }
 
@@ -140,14 +140,16 @@ func buildTablewriterColors(formatters []string) tablewriter.Colors {
 	return colors
 }
 
-func printBalanceSheet(
-	balanceSheet bookkeeper.BalanceSheet,
+func printBalanceSheets(
+	balanceSheets []bookkeeper.BalanceSheet,
 	reportSchema ReportSchema,
 	dateStr string,
 ) error {
 	ac := accounting.Accounting{Symbol: "$", Precision: 2}
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"", dateStr})
+	headers := []string{""}
+	headers = append(headers, strings.Split(dateStr, ",")...)
+	table.SetHeader(headers)
 	// append data
 	for _, itemName := range reportSchema.Order {
 		tags, ok := reportSchema.Mapping[itemName]
@@ -155,40 +157,46 @@ func printBalanceSheet(
 			return fmt.Errorf("missing item (%s) in mapping", itemName)
 		}
 		row := []string{itemName}
-		var itemValue int64 = 0
-		for _, tag := range tags {
-			parts := strings.Split(tag, "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid tag (%s) in schema", tag)
+		for _, balanceSheet := range balanceSheets {
+			var itemValue int64 = 0
+			for _, tag := range tags {
+				parts := strings.Split(tag, "/")
+				if len(parts) != 2 {
+					return fmt.Errorf("invalid tag (%s) in schema", tag)
+				}
+				switch parts[0] {
+				case "Assets":
+					if parts[1] == "TOTAL" {
+						itemValue += balanceSheet.Assets.Total
+					} else {
+						// if parts[1] is not in Groups, it will add 0
+						itemValue += balanceSheet.Assets.Groups[parts[1]]
+					}
+				case "Liabilities":
+					if parts[1] == "TOTAL" {
+						itemValue += balanceSheet.Liabilities.Total
+					} else {
+						// if parts[1] is not in Groups, it will add 0
+						itemValue += balanceSheet.Liabilities.Groups[parts[1]]
+					}
+				case "Equities":
+					if parts[1] == "TOTAL" {
+						itemValue += balanceSheet.Equities
+					}
+				default:
+					return fmt.Errorf("invalid tag (%s) in schema", tag)
+				}
 			}
-			switch parts[0] {
-			case "Assets":
-				if parts[1] == "TOTAL" {
-					itemValue += balanceSheet.Assets.Total
-				} else {
-					// if parts[1] is not in Groups, it will add 0
-					itemValue += balanceSheet.Assets.Groups[parts[1]]
-				}
-			case "Liabilities":
-				if parts[1] == "TOTAL" {
-					itemValue += balanceSheet.Liabilities.Total
-				} else {
-					// if parts[1] is not in Groups, it will add 0
-					itemValue += balanceSheet.Liabilities.Groups[parts[1]]
-				}
-			case "Equities":
-				if parts[1] == "TOTAL" {
-					itemValue += balanceSheet.Equities
-				}
-			default:
-				return fmt.Errorf("invalid tag (%s) in schema", tag)
-			}
+			row = append(row, ac.FormatMoney(float64(itemValue)/100))
 		}
-		row = append(row, ac.FormatMoney(float64(itemValue)/100))
 		itemFormatter, ok := reportSchema.Formatters[itemName]
 		if ok {
 			cellColors := buildTablewriterColors(itemFormatter)
-			table.Rich(row, []tablewriter.Colors{cellColors, cellColors})
+			var colorSlice []tablewriter.Colors
+			for i := 0; i < len(row); i++ {
+				colorSlice = append(colorSlice, cellColors)
+			}
+			table.Rich(row, colorSlice)
 		} else {
 			table.Append(row)
 		}
