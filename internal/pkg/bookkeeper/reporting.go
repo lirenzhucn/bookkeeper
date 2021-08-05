@@ -119,7 +119,11 @@ func ComputeBalanceSheet(
 			stringInList("assets", account.Tags) {
 			balanceSheet.Assets.Total += account.Balance
 			for _, tag := range assetTags {
-				if stringInList(tag, account.Tags) {
+				match := tag != ""
+				for _, t := range strings.Split(tag, "+") {
+					match = match && stringInList(t, account.Tags)
+				}
+				if match {
 					oldAmount := balanceSheet.Assets.Groups[tag]
 					balanceSheet.Assets.Groups[tag] = oldAmount + account.Balance
 				}
@@ -129,7 +133,11 @@ func ComputeBalanceSheet(
 			stringInList("liabilities", account.Tags) {
 			balanceSheet.Liabilities.Total -= account.Balance
 			for _, tag := range liabilityTags {
-				if stringInList(tag, account.Tags) {
+				match := tag != ""
+				for _, t := range strings.Split(tag, "+") {
+					match = match && stringInList(t, account.Tags)
+				}
+				if match {
 					oldAmount := balanceSheet.Liabilities.Groups[tag]
 					balanceSheet.Liabilities.Groups[tag] = oldAmount - account.Balance
 				}

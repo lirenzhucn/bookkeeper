@@ -22,7 +22,8 @@ var balanceSheetCmd = &cobra.Command{
 func initReportCmd(rootCmd *cobra.Command) {
 	balanceSheetCmd.Flags().StringSliceP(
 		"asset-tags", "a",
-		[]string{"cash", "taxable", "retirement", "education"},
+		[]string{"cash", "taxable+liquid", "retirement", "education",
+			"nonliquid", "real estate"},
 		"Specify a list of asset tags to report separately",
 	)
 	balanceSheetCmd.Flags().StringSliceP(
