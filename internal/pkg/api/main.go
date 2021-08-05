@@ -87,7 +87,7 @@ func HandleRequests(port string, db_url string) {
 		Methods("GET").
 		Queries("accountName", "{accountName}", "date", "{date}").
 		HandlerFunc(getAccountBalanceOnDateByName)
-	myRouter.Path("/reporting/balance_sheet").
+	myRouter.Path("/reporting/account_balance").
 		Methods("GET").
 		Queries("date", "{date}").
 		HandlerFunc(getAllAccountsBalanceOnDate)

@@ -1,10 +1,7 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/lirenzhucn/bookkeeper/internal/pkg/bookkeeper"
@@ -49,13 +46,8 @@ func generateBalanceSheet(cmd *cobra.Command, args []string) {
 		dateStr = time.Now().Format("2006/01/02")
 	}
 
-	var accounts_ []bookkeeper.AccountWithBalance
-	url_ := fmt.Sprintf("%sreporting/balance_sheet?date=%s", BASE_URL,
-		url.QueryEscape(dateStr))
-	resp, err := http.Get(url_)
+	accounts_, err := allAccountsBalance(dateStr)
 	cobra.CheckErr(err)
-	defer resp.Body.Close()
-	json.NewDecoder(resp.Body).Decode(&accounts_)
 
 	balanceSheet := bookkeeper.ComputeBalanceSheet(accounts_, assetTags, liabilityTags)
 	fmt.Println(balanceSheet)

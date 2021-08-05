@@ -35,7 +35,6 @@ var accountBalanceCmd = &cobra.Command{
 func initAccountCmd(rootCmd *cobra.Command) {
 	accountLsCmd.Flags().IntP("id", "i", -1, "specify an specific id to list")
 	accountBalanceCmd.Flags().StringP("name", "n", "", "specify the account name")
-	accountBalanceCmd.MarkFlagRequired("name")
 	accountBalanceCmd.Flags().StringP(
 		"date", "d", "", "specify the date (default: today local time)")
 	accountCmd.AddCommand(accountLsCmd)
@@ -44,38 +43,78 @@ func initAccountCmd(rootCmd *cobra.Command) {
 }
 
 func accountBalance(cmd *cobra.Command, args []string) {
-	var account_ bookkeeper.AccountWithBalance
 	name, err := cmd.Flags().GetString("name")
 	cobra.CheckErr(err)
 	date, _ := cmd.Flags().GetString("date")
 	if date == "" {
 		date = time.Now().Format("2006/01/02")
 	}
+	if name == "" {
+		accounts_, err := allAccountsBalance(date)
+		cobra.CheckErr(err)
+		tablePrintAccountsWithBalance(accounts_)
+	} else {
+		account_, err := singleAccountBalance(name, date)
+		cobra.CheckErr(err)
+		tablePrintAccountsWithBalance([]bookkeeper.AccountWithBalance{account_})
+	}
+}
+
+func tablePrintAccountsWithBalance(accounts_ []bookkeeper.AccountWithBalance) {
+	// table print
+	ac := accounting.Accounting{Symbol: "$", Precision: 2}
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Id", "Name", "Desc", "Tags", "Balance"})
+	for _, account_ := range accounts_ {
+		table.Append([]string{
+			fmt.Sprintf("%d", account_.Id), account_.Name, account_.Desc,
+			strings.Join(account_.Tags, ", "),
+			ac.FormatMoney(float64(account_.Balance) / 100),
+		})
+	}
+	table.Render()
+}
+
+func allAccountsBalance(date string) ([]bookkeeper.AccountWithBalance, error) {
+	var accounts_ []bookkeeper.AccountWithBalance
+	url_ := fmt.Sprintf("%sreporting/account_balance?date=%s",
+		BASE_URL, url.QueryEscape(date))
+	resp, err := http.Get(url_)
+	if err != nil {
+		return accounts_, err
+	}
+	defer resp.Body.Close()
+	json.NewDecoder(resp.Body).Decode(&accounts_)
+	return accounts_, nil
+}
+
+func singleAccountBalance(
+	name string, date string) (bookkeeper.AccountWithBalance, error) {
+	var account_ bookkeeper.AccountWithBalance
 	url_ := fmt.Sprintf("%sreporting/account_balance?accountName=%s&date=%s",
 		BASE_URL, url.QueryEscape(name), url.QueryEscape(date))
 	resp, err := http.Get(url_)
-	cobra.CheckErr(err)
+	if err != nil {
+		return account_, err
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		fmt.Printf(
 			"Failed to get the balance for account %s (response status: %s)\n",
 			name, resp.Status)
-		return
+		return account_, fmt.Errorf(
+			"failed to get the balance for account %s (response status: %s)",
+			name, resp.Status)
 	}
 	body, err := io.ReadAll(resp.Body)
-	cobra.CheckErr(err)
+	if err != nil {
+		return account_, err
+	}
 	err = json.Unmarshal(body, &account_)
-	cobra.CheckErr(err)
-	// table print
-	ac := accounting.Accounting{Symbol: "$", Precision: 2}
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Id", "Name", "Desc", "Tags", "Balance"})
-	table.Append([]string{
-		fmt.Sprintf("%d", account_.Id), account_.Name, account_.Desc,
-		strings.Join(account_.Tags, ", "),
-		ac.FormatMoney(float64(account_.Balance) / 100),
-	})
-	table.Render()
+	if err != nil {
+		return account_, err
+	}
+	return account_, nil
 }
 
 func lsAccounts(cmd *cobra.Command, args []string) {
