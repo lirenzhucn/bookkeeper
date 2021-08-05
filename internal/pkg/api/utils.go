@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -25,6 +26,30 @@ func checkErr(err error, w http.ResponseWriter, statusCode int,
 		return false
 	}
 	return true
+}
+
+func parseMultipleDateTimesInQueryAndFail(
+	w http.ResponseWriter, r *http.Request, queryTerm string,
+) (dates []time.Time, ok bool) {
+	ok = true
+	dateStr := r.FormValue(queryTerm)
+	if dateStr == "" {
+		http.Error(w, "Invalid query string", 400)
+		ok = false
+		return
+	}
+	offset, _ := time.ParseDuration("23h59m59s")
+	for _, s := range strings.Split(dateStr, ",") {
+		d, err := time.Parse("2006/01/02", s)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Invalid query term %s", queryTerm), 400)
+			ok = false
+			return
+		}
+		d = d.Add(offset)
+		dates = append(dates, d)
+	}
+	return
 }
 
 func parseDateTimeInQueryAndFail(
