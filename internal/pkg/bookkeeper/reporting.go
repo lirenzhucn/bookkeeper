@@ -2,6 +2,7 @@ package bookkeeper
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v4"
@@ -69,6 +70,10 @@ func ComputeAccountBalanceById(
 		accountId, date,
 	)
 	err = row.Scan(&amount)
+	if err != nil && strings.Contains(err.Error(), "cannot assign NULL") {
+		// no transactions for this account
+		return account, 0, nil
+	}
 	if err != nil {
 		return account, amount, err
 	}
@@ -90,4 +95,47 @@ func GetAllAccountIds(dbpool *pgxpool.Pool) ([]int, error) {
 		ids = append(ids, id)
 	}
 	return ids, nil
+}
+
+type BalanceSheetItem struct {
+	Total  int64            `json:"total"`
+	Groups map[string]int64 `json:"groups"`
+}
+
+type BalanceSheet struct {
+	Assets      BalanceSheetItem `json:"assets"`
+	Liabilities BalanceSheetItem `json:"liabilities"`
+	Equities    int64            `json:"equities"`
+}
+
+func ComputeBalanceSheet(
+	accounts []AccountWithBalance, assetTags []string, liabilityTags []string,
+) BalanceSheet {
+	var balanceSheet BalanceSheet
+	balanceSheet.Assets.Groups = make(map[string]int64)
+	balanceSheet.Liabilities.Groups = make(map[string]int64)
+	for _, account := range accounts {
+		if stringInList("asset", account.Tags) ||
+			stringInList("assets", account.Tags) {
+			balanceSheet.Assets.Total += account.Balance
+			for _, tag := range assetTags {
+				if stringInList(tag, account.Tags) {
+					oldAmount := balanceSheet.Assets.Groups[tag]
+					balanceSheet.Assets.Groups[tag] = oldAmount + account.Balance
+				}
+			}
+		}
+		if stringInList("liability", account.Tags) ||
+			stringInList("liabilities", account.Tags) {
+			balanceSheet.Liabilities.Total -= account.Balance
+			for _, tag := range liabilityTags {
+				if stringInList(tag, account.Tags) {
+					oldAmount := balanceSheet.Liabilities.Groups[tag]
+					balanceSheet.Liabilities.Groups[tag] = oldAmount - account.Balance
+				}
+			}
+		}
+		balanceSheet.Equities = balanceSheet.Assets.Total - balanceSheet.Liabilities.Total
+	}
+	return balanceSheet
 }

@@ -22,4 +22,5 @@ func Init() {
 	initImportCmd(rootCmd)
 	initAccountCmd(rootCmd)
 	initTransCmd(rootCmd)
+	initReportCmd(rootCmd)
 }

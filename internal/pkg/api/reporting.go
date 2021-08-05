@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -51,7 +52,8 @@ func getAllAccountsBalanceOnDate(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, id := range ids {
 		account, balance, err := bookkeeper.ComputeAccountBalanceById(dbpool, id, date)
-		if !checkErr(err, w, 500, "Failed to get balance for account id %d", id) {
+		if !checkErr(err, w, 500,
+			fmt.Sprintf("Failed to get balance for account id %d", id)) {
 			return
 		}
 		accounts_ = append(
