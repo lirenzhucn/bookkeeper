@@ -13,6 +13,35 @@ import (
 	"go.uber.org/zap"
 )
 
+func GetAllAccountsBalanceOnDate(
+	dbpool *pgxpool.Pool, date time.Time,
+) ([]AccountWithBalance, error) {
+	sugar := zap.L().Sugar()
+	defer sugar.Sync()
+
+	var accounts_ []AccountWithBalance
+	ids, err := GetAllAccountIds(dbpool)
+	if err != nil {
+		sugar.Errorw("Failed to get all account ids", "error", err)
+		return accounts_, err
+	}
+	for _, id := range ids {
+		account, balance, err := ComputeAccountBalanceById(dbpool, id, date)
+		if err != nil {
+			sugar.Errorw(
+				fmt.Sprintf("Failed to get balance for account id %d", id),
+				"error", err,
+			)
+			return accounts_, err
+		}
+		accounts_ = append(
+			accounts_,
+			AccountWithBalance{Account: account, Balance: balance},
+		)
+	}
+	return accounts_, nil
+}
+
 func InitDb(dbpool *pgxpool.Pool, dataFile string, dryRun bool) ([]string, error) {
 	sugar := zap.L().Sugar()
 	defer sugar.Sync()

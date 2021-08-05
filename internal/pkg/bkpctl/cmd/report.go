@@ -3,6 +3,8 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -108,10 +110,17 @@ func generateBalanceSheet(cmd *cobra.Command, args []string) {
 	err = json.Unmarshal([]byte(reportSchemaStr), &reportSchema)
 	cobra.CheckErr(err)
 
-	accounts_, err := allAccountsBalance(dateStr)
+	url_ := fmt.Sprintf(
+		"%sreporting/balance_sheet?date=%s&assetTags=%s&liabilityTags=%s",
+		BASE_URL, url.QueryEscape(dateStr),
+		url.QueryEscape(strings.Join(assetTags, ",")),
+		url.QueryEscape(strings.Join(liabilityTags, ",")),
+	)
+	resp, err := http.Get(url_)
 	cobra.CheckErr(err)
-
-	balanceSheet := bookkeeper.ComputeBalanceSheet(accounts_, assetTags, liabilityTags)
+	defer resp.Body.Close()
+	var balanceSheet bookkeeper.BalanceSheet
+	json.NewDecoder(resp.Body).Decode(&balanceSheet)
 	err = printBalanceSheet(balanceSheet, reportSchema, dateStr)
 	cobra.CheckErr(err)
 }
