@@ -3,6 +3,8 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -33,6 +35,47 @@ type dateRange struct {
 	endDate   time.Time
 }
 
+var dateRangeShorthandRegex = regexp.MustCompile(`^([0-9]{4})([HQ][0-9])$`)
+
+func parseDateRangeShorthand(s string) (dr dateRange, ok bool) {
+	ok = true
+	s = strings.TrimSpace(s)
+	m := dateRangeShorthandRegex.FindStringSubmatch(s)
+	if len(m) != 3 {
+		ok = false
+		return
+	}
+	y, err := strconv.Atoi(m[1])
+	if err != nil {
+		ok = false
+		return
+	}
+	switch strings.ToLower(m[2]) {
+	case "q1":
+		dr.startDate = time.Date(y, 1, 1, 0, 0, 0, 0, time.UTC)
+		dr.endDate = time.Date(y, 3, 31, 23, 59, 59, 0, time.UTC)
+	case "q2":
+		dr.startDate = time.Date(y, 4, 1, 0, 0, 0, 0, time.UTC)
+		dr.endDate = time.Date(y, 6, 30, 23, 59, 59, 0, time.UTC)
+	case "q3":
+		dr.startDate = time.Date(y, 7, 1, 0, 0, 0, 0, time.UTC)
+		dr.endDate = time.Date(y, 9, 30, 23, 59, 59, 0, time.UTC)
+	case "q4":
+		dr.startDate = time.Date(y, 10, 1, 0, 0, 0, 0, time.UTC)
+		dr.endDate = time.Date(y, 12, 31, 23, 59, 59, 0, time.UTC)
+	case "h1":
+		dr.startDate = time.Date(y, 1, 1, 0, 0, 0, 0, time.UTC)
+		dr.endDate = time.Date(y, 6, 30, 23, 59, 59, 0, time.UTC)
+	case "h2":
+		dr.startDate = time.Date(y, 7, 1, 0, 0, 0, 0, time.UTC)
+		dr.endDate = time.Date(y, 12, 31, 23, 59, 59, 0, time.UTC)
+	default:
+		ok = false
+		return
+	}
+	return
+}
+
 func parseMultipleDateRangesInQueryAndFail(
 	w http.ResponseWriter, r *http.Request, queryTerm string,
 ) (dateRanges []dateRange, ok bool) {
@@ -44,6 +87,13 @@ func parseMultipleDateRangesInQueryAndFail(
 	}
 	offset, _ := time.ParseDuration("23h59m59s")
 	for _, s := range strings.Split(dateRangeStr, ",") {
+		// check for shorhands first
+		dr, drOk := parseDateRangeShorthand(s)
+		if drOk {
+			dateRanges = append(dateRanges, dr)
+			continue
+		}
+		// otherwise
 		p := strings.Split(s, "-")
 		if len(p) != 2 {
 			http.Error(w, "Invalid date range", 400)
