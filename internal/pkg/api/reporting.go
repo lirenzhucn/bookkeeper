@@ -62,3 +62,45 @@ func getBalanceSheet(w http.ResponseWriter, r *http.Request) {
 	}
 	json.NewEncoder(w).Encode(balanceSheets)
 }
+
+func getIncomeStatement(w http.ResponseWriter, r *http.Request) {
+	var isList []bookkeeper.IncomeStatement
+	var (
+		ok              bool
+		dateRanges      []dateRange
+		revenueTags     []string
+		taxesTags       []string
+		expensesTags    []string
+		investmentsTags []string
+	)
+	if dateRanges, ok = parseMultipleDateRangesInQueryAndFail(w, r, "dateRange"); !ok {
+		return
+	}
+	if revenueTags, ok = parseTagsInQueryAndFail(w, r, "revenueTags"); !ok {
+		return
+	}
+	if taxesTags, ok = parseTagsInQueryAndFail(w, r, "taxesTags"); !ok {
+		return
+	}
+	if expensesTags, ok = parseTagsInQueryAndFail(w, r, "expensesTags"); !ok {
+		return
+	}
+	if investmentsTags, ok = parseTagsInQueryAndFail(w, r, "investmentsTags"); !ok {
+		return
+	}
+	for _, dateRange_ := range dateRanges {
+		is, err := bookkeeper.ComputeIncomeStatement(
+			dbpool, dateRange_.startDate, dateRange_.endDate,
+			revenueTags, taxesTags, expensesTags, investmentsTags,
+		)
+		if !checkErr(
+			err, w, 500,
+			"Failed to compute income statement for at least one period",
+			"error", err,
+		) {
+			return
+		}
+		isList = append(isList, is)
+	}
+	json.NewEncoder(w).Encode(isList)
+}

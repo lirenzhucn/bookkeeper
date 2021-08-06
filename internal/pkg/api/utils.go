@@ -28,6 +28,46 @@ func checkErr(err error, w http.ResponseWriter, statusCode int,
 	return true
 }
 
+type dateRange struct {
+	startDate time.Time
+	endDate   time.Time
+}
+
+func parseMultipleDateRangesInQueryAndFail(
+	w http.ResponseWriter, r *http.Request, queryTerm string,
+) (dateRanges []dateRange, ok bool) {
+	ok = false
+	dateRangeStr := r.FormValue(queryTerm)
+	if dateRangeStr == "" {
+		http.Error(w, "Invalid query string", 400)
+		return
+	}
+	offset, _ := time.ParseDuration("23h59m59s")
+	for _, s := range strings.Split(dateRangeStr, ",") {
+		p := strings.Split(s, "-")
+		if len(p) != 2 {
+			http.Error(w, "Invalid date range", 400)
+			return
+		}
+		startDate, err := time.Parse("2006/01/02", p[0])
+		if err != nil {
+			http.Error(w, "Invalid date", 400)
+			return
+		}
+		endDate, err := time.Parse("2006/01/02", p[1])
+		if err != nil {
+			http.Error(w, "Invalid date", 400)
+			return
+		}
+		// shift endDate to the end of that day
+		endDate = endDate.Add(offset)
+		dateRanges = append(dateRanges,
+			dateRange{startDate: startDate, endDate: endDate})
+	}
+	ok = true
+	return
+}
+
 func parseMultipleDateTimesInQueryAndFail(
 	w http.ResponseWriter, r *http.Request, queryTerm string,
 ) (dates []time.Time, ok bool) {
