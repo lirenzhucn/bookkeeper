@@ -345,7 +345,6 @@ func generateIncomeStatement(cmd *cobra.Command, args []string) {
 	defer resp.Body.Close()
 	var isList []bookkeeper.IncomeStatement
 	json.NewDecoder(resp.Body).Decode(&isList)
-	fmt.Println(isList)
 	var statements []bookkeeper.StatementWithFields
 	for _, is := range isList {
 		statements = append(statements, is)
