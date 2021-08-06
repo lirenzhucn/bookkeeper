@@ -97,15 +97,56 @@ func GetAllAccountIds(dbpool *pgxpool.Pool) ([]int, error) {
 	return ids, nil
 }
 
-type BalanceSheetItem struct {
+type ReportGroup struct {
 	Total  int64            `json:"total"`
 	Groups map[string]int64 `json:"groups"`
 }
 
+func (rg *ReportGroup) Init() {
+	rg.Groups = make(map[string]int64)
+}
+
+func (rg *ReportGroup) Remainder() int64 {
+	res := rg.Total
+	for _, v := range rg.Groups {
+		res -= v
+	}
+	return res
+}
+
+type StatementWithFields interface {
+	GetFieldAsReportGroup(fieldName string) (*ReportGroup, bool)
+	GetFieldAsInt64(fieldName string) (int64, bool)
+}
+
 type BalanceSheet struct {
-	Assets      BalanceSheetItem `json:"assets"`
-	Liabilities BalanceSheetItem `json:"liabilities"`
-	Equities    int64            `json:"equities"`
+	Assets      ReportGroup `json:"assets"`
+	Liabilities ReportGroup `json:"liabilities"`
+	Equities    int64       `json:"equities"`
+}
+
+func (bs BalanceSheet) GetFieldAsReportGroup(fieldName string) (rg *ReportGroup, ok bool) {
+	ok = true
+	switch fieldName {
+	case "Assets":
+		rg = &bs.Assets
+	case "Liabilities":
+		rg = &bs.Liabilities
+	default:
+		ok = false
+	}
+	return
+}
+
+func (bs BalanceSheet) GetFieldAsInt64(fieldName string) (res int64, ok bool) {
+	ok = true
+	switch fieldName {
+	case "Equities":
+		res = bs.Equities
+	default:
+		ok = false
+	}
+	return
 }
 
 func ComputeBalanceSheet(
@@ -146,4 +187,107 @@ func ComputeBalanceSheet(
 		balanceSheet.Equities = balanceSheet.Assets.Total - balanceSheet.Liabilities.Total
 	}
 	return balanceSheet
+}
+
+type IncomeStatement struct {
+	Revenue         ReportGroup `json:"revenue"`
+	Taxes           ReportGroup `json:"taxes"`
+	RevenueNetTaxes int64       `json:"revenue_net_taxes"`
+	Expenses        ReportGroup `json:"expenses"`
+	OperatingIncome int64       `json:"operating_income"`
+	Investments     ReportGroup `json:"investments"`
+	TotalEarnings   int64       `json:"total_earnings"`
+}
+
+func (is IncomeStatement) GetFieldAsReportGroup(fieldName string) (rg *ReportGroup, ok bool) {
+	ok = true
+	switch fieldName {
+	case "Revenue":
+		rg = &is.Revenue
+	case "Taxes":
+		rg = &is.Taxes
+	case "Expenses":
+		rg = &is.Expenses
+	case "Investments":
+		rg = &is.Investments
+	default:
+		ok = false
+	}
+	return
+}
+
+func (is IncomeStatement) GetFieldAsInt64(fieldName string) (res int64, ok bool) {
+	ok = true
+	switch fieldName {
+	case "RevenueNetTaxes":
+		res = is.RevenueNetTaxes
+	case "OperatingIncome":
+		res = is.OperatingIncome
+	case "TotalEarnings":
+		res = is.TotalEarnings
+	default:
+		ok = false
+	}
+	return
+}
+
+func (is *IncomeStatement) Init() {
+	is.Revenue.Init()
+	is.Taxes.Init()
+	is.Expenses.Init()
+	is.Investments.Init()
+}
+
+func ComputeIncomeStatement(
+	dbpool *pgxpool.Pool, startDate time.Time, endDate time.Time,
+	revenueTags []string, taxesTags []string, expensesTags []string,
+	investmentsTags []string,
+) (is IncomeStatement, err error) {
+	is.Init()
+	rows, err := dbpool.Query(
+		context.Background(),
+		`select type, category, sub_category, amount from transactions
+where date >= $1 and date <= $2`,
+		startDate, endDate,
+	)
+	if err != nil {
+		return
+	}
+	for rows.Next() {
+		var (
+			type_       string
+			category    string
+			subCategory string
+			amount      int64
+		)
+		if err = rows.Scan(&type_, &category, &subCategory, &amount); err != nil {
+			return
+		}
+		if type_ == "In" || type_ == "Out" {
+			accumulateByTags(&is.Revenue, revenueTags, category+"/"+subCategory, amount)
+			accumulateByTags(&is.Investments, investmentsTags, category+"/"+subCategory, amount)
+			// NOTE: amounts for taxes and expenses are flipped, b/c they are
+			// negative in the transactions table
+			accumulateByTags(&is.Taxes, taxesTags, category+"/"+subCategory, -amount)
+			accumulateByTags(&is.Expenses, expensesTags, category+"/"+subCategory, -amount)
+		}
+	}
+	is.RevenueNetTaxes = is.Revenue.Total - is.Taxes.Total
+	is.OperatingIncome = is.RevenueNetTaxes - is.Expenses.Total
+	is.TotalEarnings = is.OperatingIncome + is.Investments.Total
+	return
+}
+
+func accumulateByTags(
+	rg *ReportGroup, matchers []string, tag string, amount int64,
+) {
+	if stringMatchList(tag, matchers) {
+		rg.Total += amount
+		for _, m := range matchers {
+			if stringMatch(tag, m) {
+				old := rg.Groups[m]
+				rg.Groups[m] = old + amount
+			}
+		}
+	}
 }
