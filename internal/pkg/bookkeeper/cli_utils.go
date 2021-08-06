@@ -25,7 +25,7 @@ func InitConfig(cmd *cobra.Command, configName string, configType string, cfgFil
 	} else {
 		// Find the home directory
 		cwd, err := os.Getwd()
-		configDir := path.Join(cwd, "configs")
+		configDir := path.Join(cwd, "configs/private")
 		cobra.CheckErr(err)
 		// Search config in home directory with name <configName>
 		viper.AddConfigPath(configDir)

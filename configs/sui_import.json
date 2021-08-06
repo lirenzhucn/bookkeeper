@@ -1,0 +1,448 @@
+{
+    "Accounts": {
+        "LZ CHA C": {
+            "name": "LZ CHA C",
+            "desc_": "Liren Chase Checking",
+            "tags": [
+                "cash",
+                "checking",
+                "asset",
+                "LZ"
+            ]
+        },
+        "LZ DIS C": {
+            "name": "LZ DIS C",
+            "desc_": "Liren Discover Checking",
+            "tags": [
+                "cash",
+                "checking",
+                "asset",
+                "LZ"
+            ]
+        },
+        "WS CHA C": {
+            "name": "WS CHA C",
+            "desc_": "Wensheng Chase Checking",
+            "tags": [
+                "cash",
+                "checking",
+                "asset",
+                "WS"
+            ]
+        },
+        "LZ MAR S": {
+            "name": "LZ MAR S",
+            "desc_": "Liren Marcus Savings",
+            "tags": [
+                "cash",
+                "savings",
+                "asset",
+                "LZ"
+            ]
+        },
+        "WS DIS S": {
+            "name": "WS DIS S",
+            "desc_": "Wensheng Discover Savings",
+            "tags": [
+                "cash",
+                "savings",
+                "asset",
+                "WS"
+            ]
+        },
+        "LZ MAR CD": {
+            "name": "LZ MAR CD",
+            "desc_": "Liren Marcus CD Combined",
+            "tags": [
+                "cash",
+                "savings",
+                "asset",
+                "LZ"
+            ]
+        },
+        "WS DIS CD": {
+            "name": "WS DIS CD",
+            "desc_": "Wensheng Discover CD Combined",
+            "tags": [
+                "cash",
+                "savings",
+                "asset",
+                "WS"
+            ]
+        },
+        "LZ ACO B": {
+            "name": "LZ ACO B",
+            "desc_": "Liren Acorns Brokerage",
+            "tags": [
+                "investment",
+                "taxable",
+                "liquid",
+                "asset",
+                "LZ"
+            ]
+        },
+        "LZ ROB B": {
+            "name": "LZ ROB B",
+            "desc_": "Liren Robinhood Brokerage",
+            "tags": [
+                "investment",
+                "taxable",
+                "liquid",
+                "asset",
+                "LZ"
+            ]
+        },
+        "WS FID-STO B": {
+            "name": "WS FID-STO B",
+            "desc_": "Wensheng Fidelity Brokerage",
+            "tags": [
+                "investment",
+                "taxable",
+                "liquid",
+                "asset",
+                "WS"
+            ]
+        },
+        "ZHU INVEST": {
+            "name": "ZHU INVEST",
+            "desc_": "Zhu Family Investment at Fidelity Brokerage",
+            "tags": [
+                "investment",
+                "taxable",
+                "liquid",
+                "asset",
+                "ZHU"
+            ]
+        },
+        "LZ TreasuryDirect": {
+            "name": "LZ TreasuryDirect",
+            "desc_": "Liren TreasuryDirect holding savings bonds, etc.",
+            "tags": [
+                "investment",
+                "taxable",
+                "asset",
+                "LZ"
+            ]
+        },
+        "AYZ TreasuryDirect": {
+            "name": "AYZ TreasuryDirect",
+            "desc_": "Aaron TreasuryDirect holding savings bonds, etc.",
+            "tags": [
+                "investment",
+                "taxable",
+                "asset",
+                "AYZ"
+            ]
+        },
+        "LZ PRI HOL": {
+            "name": "LZ PRI HOL",
+            "desc_": "Liren Equities of Privately Held Companies",
+            "tags": [
+                "investment",
+                "taxable",
+                "nonliquid",
+                "asset",
+                "LZ"
+            ]
+        },
+        "HOME": {
+            "name": "HOME",
+            "desc_": "Home Value Net Mortgage",
+            "tags": [
+                "real estate",
+                "asset"
+            ]
+        },
+        "LZ HSA": {
+            "name": "LZ HSA",
+            "desc_": "Liren HSA",
+            "tags": [
+                "tax-deferred",
+                "pre-tax",
+                "nonliquid",
+                "asset",
+                "LZ"
+            ]
+        },
+        "WS DEP FSA": {
+            "name": "WS DEP FSA",
+            "desc_": "Wensheng Dependent FSA",
+            "tags": [
+                "pre-tax",
+                "nonliquid",
+                "asset",
+                "WS"
+            ]
+        },
+        "WS MED FSA": {
+            "name": "WS MED FSA",
+            "desc_": "Wensheng Medical FSA",
+            "tags": [
+                "pre-tax",
+                "nonliquid",
+                "asset",
+                "WS"
+            ]
+        },
+        "LZ 401K": {
+            "name": "LZ 401K",
+            "desc_": "Liren 401(k) Mixed",
+            "tags": [
+                "tax-deferred",
+                "retirement",
+                "asset",
+                "LZ"
+            ]
+        },
+        "WS 401K FID": {
+            "name": "WS 401K FID",
+            "desc_": "Wensheng 401(k) Mixed",
+            "tags": [
+                "tax-deferred",
+                "retirement",
+                "asset",
+                "WS"
+            ]
+        },
+        "LZ IRA FID": {
+            "name": "LZ IRA FID",
+            "desc_": "Liren IRA at Fidelity",
+            "tags": [
+                "tax-deferred",
+                "retirement",
+                "asset",
+                "LZ"
+            ]
+        },
+        "WS IRA FID": {
+            "name": "WS IRA FID",
+            "desc_": "Wensheng IRA at Fidelity",
+            "tags": [
+                "tax-deferred",
+                "retirement",
+                "asset",
+                "WS"
+            ]
+        },
+        "LZ 529": {
+            "name": "LZ 529",
+            "desc_": "Liren 529 Plan",
+            "tags": [
+                "tax-deferred",
+                "education",
+                "asset",
+                "LZ"
+            ]
+        },
+        "AYZ 529": {
+            "name": "AYZ 529",
+            "desc_": "Aaron 529 Plan",
+            "tags": [
+                "tax-deferred",
+                "education",
+                "asset",
+                "AYZ"
+            ]
+        },
+        "ZHU FAMILY VAULT": {
+            "name": "ZHU FAMILY VAULT",
+            "desc_": "Debt owed to Zhu family",
+            "tags": [
+                "loan",
+                "liability",
+                "LZ"
+            ]
+        },
+        "LZ Apple Card": {
+            "name": "LZ Apple Card",
+            "desc_": "Liren Apple Credit Card",
+            "tags": [
+                "credit card",
+                "liability",
+                "LZ"
+            ]
+        },
+        "LZ Chase Unlimited": {
+            "name": "LZ Chase Unlimited",
+            "desc_": "Liren Chase Freedom Unlimited",
+            "tags": [
+                "credit card",
+                "liability",
+                "LZ"
+            ]
+        },
+        "LZ Chase Freedom": {
+            "name": "LZ Chase Freedom",
+            "desc_": "Liren Chase Freedom",
+            "tags": [
+                "credit card",
+                "liability",
+                "LZ"
+            ]
+        },
+        "WS Costco": {
+            "name": "WS Costco",
+            "desc_": "Wensheng Costco Credit Card by Citi",
+            "tags": [
+                "credit card",
+                "liability",
+                "WS"
+            ]
+        },
+        "WS Chase Freedom": {
+            "name": "WS Chase Freedom",
+            "desc_": "Wensheng Chase Freedom",
+            "tags": [
+                "credit card",
+                "liability",
+                "WS"
+            ]
+        },
+        "LZ Discover It": {
+            "name": "LZ Discover It",
+            "desc_": "Liren Discover It Credit Card",
+            "tags": [
+                "credit card",
+                "liability",
+                "LZ"
+            ]
+        },
+        "WS BlueCash": {
+            "name": "WS BlueCash",
+            "desc_": "Wensheng Amex BlueCash",
+            "tags": [
+                "credit card",
+                "liability",
+                "WS"
+            ]
+        },
+        "WS BoA1": {
+            "name": "WS BoA1",
+            "desc_": "Wensheng Bank of America 1",
+            "tags": [
+                "credit card",
+                "liability",
+                "WS"
+            ]
+        },
+        "LZ BoA": {
+            "name": "LZ BoA",
+            "desc_": "Liren Bank of America",
+            "tags": [
+                "credit card",
+                "liability",
+                "WS"
+            ]
+        },
+        "WS Target": {
+            "name": "WS Target",
+            "desc_": "Wensheng Target Red Card",
+            "tags": [
+                "credit card",
+                "liability",
+                "WS"
+            ]
+        },
+        "LZ PAYROLL": {
+            "name": "LZ PAYROLL",
+            "desc_": "Liren Payroll virtual account",
+            "tags": [
+                "virtual",
+                "asset",
+                "LZ"
+            ]
+        },
+        "WS PAYROLL": {
+            "name": "WS PAYROLL",
+            "desc_": "Wensheng Payroll virtual account",
+            "tags": [
+                "virtual",
+                "asset",
+                "WS"
+            ]
+        },
+        "WS ESPP": {
+            "name": "WS ESPP",
+            "desc_": "Wensheng ESPP virtual account",
+            "tags": [
+                "virtual",
+                "asset",
+                "WS"
+            ]
+        }
+    },
+    "CategoryMap": {
+        "职业收入": "Professional Income",
+        "其他收入": "Other Income",
+        "投资": "Investment",
+        "税费": "Taxes",
+        "医疗支出": "Medical Exp",
+        "其他支出": "Other Exp",
+        "购物": "Shopping",
+        "交通": "Transportation",
+        "买菜吃饭": "Food & Dining",
+        "子女": "Kids",
+        "水电煤气": "Bills & Utilities",
+        "娱乐": "Entertainment",
+        "通信": "Communications",
+        "住房": "Home"
+    },
+    "SubCategoryMap": {
+        "雇主匹配": "Employer Match",
+        "工资收入": "Salary",
+        "州所得税": "State Taxes",
+        "利息收入": "Interest Income",
+        "联邦所得税": "Federal Taxes",
+        "医疗保险": "Health Insurance",
+        "餐馆外卖": "Restaurant",
+        "买菜": "Groceries",
+        "玩具书籍": "Baby Supplies",
+        "手机费": "Mobile",
+        "电视电影": "TV & Movies",
+        "信用卡返现": "Cash Back",
+        "杂项支出": "Misc Exp",
+        "书籍": "Books",
+        "汽车保险": "Auto Insurance",
+        "汽油": "Gasoline",
+        "打扫卫生": "Cleaning",
+        "办公用品": "Office Supplies",
+        "杂项购物": "Misc Shopping",
+        "住宅安保": "Home Security",
+        "水费": "Water",
+        "电和煤气": "Utilities",
+        "网费": "Internet",
+        "金融管理费": "Financial Advisor",
+        "物业管理费": "HOA",
+        "咖啡": "Coffee",
+        "报销": "Reimbursement",
+        "可税账户收益": "Taxable Investment",
+        "退休账户收益": "Retirement Investment",
+        "教育账户收益": "Education Investment",
+        "家具家电": "Furniture & Appliance",
+        "按揭利息": "Mortgage Interest",
+        "礼金": "Gifts",
+        "未分类收入": "Misc Income",
+        "RSU": "RSU",
+        "托儿所": "Daycare",
+        "退货返款": "Refund",
+        "健身器材": "Exercise Equipment",
+        "飞机票": "Air Travel",
+        "药店": "Pharmacy",
+        "报税服务": "Tax Service",
+        "注册牌照": "License & Registration",
+        "贷款杂费": "Loan Fees",
+        "房产税": "Property Taxes",
+        "维修部件": "Maintenance & Parts",
+        "游戏": "Video Games",
+        "医生诊所": "Doctor"
+    },
+    "TransactionTypes": {
+        "转入": "TransferIn",
+        "转出": "TransferOut",
+        "收入": "In",
+        "支出": "Out",
+        "余额变更": "BalanceChange",
+        "负债变更": "LiabilityChange"
+    },
+    "DateFormatter": "2006-01-02 15:04:05"
+}

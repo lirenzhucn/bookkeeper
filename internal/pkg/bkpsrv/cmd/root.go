@@ -36,7 +36,7 @@ func Execute() error {
 func Init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.Flags().StringVar(&cfgFile, "config", "",
-		"config file (default is ./configs/.bkpsrv.yaml)")
+		"config file (default is ./configs/private/.bkpsrv.yaml)")
 	rootCmd.Flags().IntP("port", "p", 10000, "the port of the server")
 	rootCmd.Flags().StringP("db-url", "d", "", "URL to the database service")
 }
