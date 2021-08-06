@@ -68,15 +68,19 @@ func initReportCmd(rootCmd *cobra.Command) {
 	"Cash or Equivalent",
 	"Taxable Securities",
 	"Liquid Assets",
+	"-",
 	"Retirement Savings",
 	"Education Savings",
 	"Other Nonliquid",
 	"Assets excl. Home",
+	"-",
 	"Home Net Mortgage",
 	"Total Assets",
+	"-",
 	"Short Term Liabilities",
 	"Long Term Liabilities",
 	"Total Liabilities",
+	"-",
 	"Stockholders Equities"
 ],
 "formatters": {
@@ -84,7 +88,7 @@ func initReportCmd(rootCmd *cobra.Command) {
 	"Assets excl. Home": ["bold"],
 	"Total Assets": ["bold", "green"],
 	"Total Liabilities": ["bold", "red"],
-	"Stockholders Equities": ["bold"]
+	"Stockholders Equities": ["bold", "yellow"]
 }
 }`,
 		"Specify a report schema using a JSON string",
@@ -160,8 +164,10 @@ func initReportCmd(rootCmd *cobra.Command) {
 	"Employer Match",
 	"Other Revenue",
 	"Total Revenue",
+	"-",
 	"Tax Expenses",
 	"Revenue Net Taxes",
+	"-",
 	"Mortgage Interests",
 	"Loan Fees",
 	"HOA",
@@ -175,20 +181,23 @@ func initReportCmd(rootCmd *cobra.Command) {
 	"Medical Exp",
 	"Other Exp",
 	"Total Expenses",
+	"-",
 	"Operating Income",
+	"-",
 	"Taxable Investments",
 	"Retirement Investments",
 	"Education Investments",
 	"Invest Gains/Losses",
+	"-",
 	"Total Earnings"
 ],
 "formatters": {
-	"Total Revenue": ["bold", "green"],
-	"Revenue Net Taxes": ["bold", "green"],
+	"Total Revenue": ["bold", "red"],
+	"Revenue Net Taxes": ["bold", "yellow"],
 	"Total Expenses": ["bold", "red"],
-	"Operating Income": ["bold", "green"],
-	"Invest Gains/Losses": ["bold", "green"],
-	"Total Earnings": ["bold", "yellow"]
+	"Operating Income": ["bold", "green", "underline"],
+	"Invest Gains/Losses": ["bold", "green", "underline"],
+	"Total Earnings": ["bold", "yellow", "underline"]
 }
 }`,
 		"Specify a report schema using a JSON string",
@@ -244,6 +253,8 @@ func buildTablewriterColors(formatters []string) tablewriter.Colors {
 		switch f {
 		case "bold":
 			colors = append(colors, tablewriter.Bold)
+		case "underline":
+			colors = append(colors, tablewriter.UnderlineSingle)
 		case "green":
 			colors = append(colors, tablewriter.FgGreenColor)
 		case "red":
@@ -265,8 +276,16 @@ func printStatements(
 	headers := []string{""}
 	headers = append(headers, strings.Split(dateStr, ",")...)
 	table.SetHeader(headers)
+	emptyRow := []string{}
+	for i := 0; i < len(headers); i++ {
+		emptyRow = append(emptyRow, "")
+	}
 	// append data
 	for _, itemName := range reportSchema.Order {
+		if itemName == "-" {
+			table.Append(emptyRow)
+			continue
+		}
 		tags, ok := reportSchema.Mapping[itemName]
 		if !ok {
 			return fmt.Errorf("missing item (%s) in mapping", itemName)
