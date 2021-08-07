@@ -1,0 +1,13 @@
+{
+    "title": "Single Expense",
+    "desc": "Post a single expense on a credit card or cash account",
+    "transactions": [
+        {
+            "id": 0,
+            "type": "Out",
+            "category": "Food & Dining",
+            "sub_category": "Groceries",
+            "account_name": "LZ Chase Unlimited"
+        }
+    ]
+}
