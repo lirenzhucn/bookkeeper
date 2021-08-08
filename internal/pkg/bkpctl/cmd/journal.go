@@ -29,4 +29,6 @@ func recordActivity(cmd *cobra.Command, args []string) {
 	cobra.CheckErr(err)
 	err = json.Unmarshal(buf, &entry)
 	cobra.CheckErr(err)
+	err = entry.DisplayAndModify(true)
+	cobra.CheckErr(err)
 }

@@ -3,6 +3,8 @@ package bookkeeper
 import (
 	"strings"
 	"time"
+
+	"github.com/leekchan/accounting"
 )
 
 type Transaction struct {
@@ -35,6 +37,15 @@ func (trans Transaction) Validate() bool {
 		valid = valid && trans.Category != "" && trans.SubCategory != ""
 	}
 	return valid
+}
+
+func (trans Transaction) FormatAmount() string {
+	ac := accounting.Accounting{Symbol: "$", Precision: 2}
+	return ac.FormatMoney(trans.Amount)
+}
+
+func (trans Transaction) FormatDate() string {
+	return trans.Date.Format("2006/01/02")
 }
 
 func GetSqlCreateTransactions() string {
