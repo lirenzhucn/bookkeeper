@@ -4,9 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
-	"github.com/manifoldco/promptui"
-	"github.com/spf13/cobra"
 )
 
 type JournalEntry struct {
@@ -134,41 +131,10 @@ func (entry *JournalEntry) NumTransactions() int {
 	return len(entry.Transactions)
 }
 
-func (entry *JournalEntry) DisplayAndModify(doValidate bool) error {
-	inactiveTpl := `{{ .FormatDate }} | {{ .AccountName }} | {{ .Type }} | {{ printf "%s/%s" .Category .SubCategory }} | {{ .FormatAmount }}`
-	templates := &promptui.SelectTemplates{
-		Label:    "{{ .Title }} has {{ .NumTransactions }} transaction(s):",
-		Active:   "\u279c " + inactiveTpl,
-		Inactive: inactiveTpl,
-		Selected: "\u2713 " + inactiveTpl,
-		Details: `
----------- Transaction ----------
-{{ "Date:" | faint }}	{{ .FormatDate }}	{{ "Account:" | faint }}	{{ .AccountName }}
-{{ "Type:" | faint }}	{{ .Type }}	{{ "Category:" | faint }}	{{ .Category }}/{{ .SubCategory }}
-{{ "Amount:" | faint }}	{{ .FormatAmount }}	{{ "AssociationId:" | faint }}	{{ .AssociationId }}`,
-	}
-	searcher := func(input string, index int) bool {
-		trans := entry.Transactions[index]
-		content := strings.Replace(
-			strings.ToLower(strings.Join([]string{
-				trans.Type,
-				trans.Category + "/" + trans.SubCategory,
-				trans.AccountName,
-				trans.AssociationId,
-			}, ",")), " ", "", -1,
-		)
-		input = strings.Replace(strings.ToLower(input), " ", "", -1)
-		return strings.Contains(content, input)
-	}
-	prompt := promptui.Select{
-		Label:     entry,
-		Items:     entry.Transactions,
-		Templates: templates,
-		Size:      5,
-		Searcher:  searcher,
-	}
-	i, _, err := prompt.Run()
-	cobra.CheckErr(err)
-	fmt.Printf("You choose number %d\n", i+1)
-	return nil
+func (entry *JournalEntry) Clear() {
+	// set everything to 0 values first
+	entry.Title = ""
+	entry.Desc = ""
+	entry.Transactions = nil
+	entry.Validators = nil
 }
