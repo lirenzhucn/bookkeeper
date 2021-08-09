@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+	"reflect"
 	"strconv"
 	"time"
 
@@ -17,38 +19,75 @@ type CategoryMap []struct {
 	SubCategories []string `json:"sub_categories"`
 }
 
-func (entry *JournalEntry) InteractiveSingleExpenseIncome(
-	accounts []bookkeeper.Account, categoryMap CategoryMap,
-) (err error) {
-	var accountNames []string
-	for _, a := range accounts {
-		accountNames = append(accountNames, a.Name)
-	}
+func (cm CategoryMap) GetAllCategories() []string {
 	var categories []string
-	var allSubCategories []string
-	for _, c := range categoryMap {
+	for _, c := range cm {
 		categories = append(categories, c.Category)
+	}
+	return categories
+}
+
+func (cm CategoryMap) GetAllSubCategories() []string {
+	var allSubCategories []string
+	for _, c := range cm {
 		allSubCategories = append(allSubCategories, c.SubCategories...)
 	}
-	entry.Clear()
+	return allSubCategories
+}
+
+func (cm CategoryMap) GetSubCategoriesByIndex(ind int) []string {
+	return cm[ind].SubCategories
+}
+
+func (cm CategoryMap) GetSubCategoriesByName(category string) []string {
+	for _, c := range cm {
+		if c.Category == category {
+			return c.SubCategories
+		}
+	}
+	return nil
+}
+
+type TransactionBasicAnswerType struct {
+	Title       string
+	Desc        string
+	Date        time.Time
+	Type        string
+	AccountName string
+	Category    string
+	SubCategory string
+	Amount      int64
+}
+
+func (entry *JournalEntry) interactiveTransactionBasic(
+	accountNames []string, categoryMap CategoryMap,
+	answers *TransactionBasicAnswerType,
+) (err error) {
 	var qs []*survey.Question
+	defaultDate := time.Now().UTC()
+	if !reflect.ValueOf(answers.Date).IsZero() {
+		defaultDate = answers.Date
+	}
 	qs = []*survey.Question{
 		{
 			Name: "title",
 			Prompt: &survey.Input{
 				Message: "A quick title of the journal entry?",
-				Default: "Single Expense / Income",
+				Default: answers.Title,
 			},
 		},
 		{
-			Name:   "desc",
-			Prompt: &survey.Input{Message: "A more detailed description"},
+			Name: "desc",
+			Prompt: &survey.Input{
+				Message: "A more detailed description",
+				Default: answers.Desc,
+			},
 		},
 		{
 			Name: "date",
 			Prompt: &survey.Input{
 				Message: "When did this transaction happen?",
-				Default: time.Now().UTC().Format("2006/01/02"),
+				Default: defaultDate.Format("2006/01/02"),
 			},
 			Validate: func(ans interface{}) error {
 				str, _ := ans.(string)
@@ -66,34 +105,34 @@ func (entry *JournalEntry) InteractiveSingleExpenseIncome(
 			Prompt: &survey.Select{
 				Message: "Choose a transaction type:",
 				Options: bookkeeper.VALID_TRANSACTION_TYPES,
-				Default: "Out",
+				Default: answers.Type,
 			},
 		},
 		{
-			Name: "account_name",
+			Name: "accountname",
 			Prompt: &survey.Select{
 				Message: "What is the account used?",
 				Options: accountNames,
-				Default: accountNames[0],
+				Default: answers.AccountName,
 			},
 		},
 		{
 			Name: "category",
 			Prompt: &survey.Select{
 				Message: "What is the category of the transaction?",
-				Options: categories,
-				Default: categories[0],
+				Options: categoryMap.GetAllCategories(),
+				Default: answers.Category,
 			},
 			Transform: func(ans interface{}) (newAns interface{}) {
+				// a hacky hook to narrow down sub-category
 				c, _ := ans.(survey.OptionAnswer)
 				for _, q := range qs {
-					if q.Name == "sub_category" {
+					if q.Name == "subcategory" {
 						p, ok := q.Prompt.(*survey.Select)
 						if !ok {
 							continue
 						}
-						p.Options = categoryMap[c.Index].SubCategories
-						p.Default = categoryMap[c.Index].SubCategories[0]
+						p.Options = categoryMap.GetSubCategoriesByIndex(c.Index)
 					}
 				}
 				newAns = ans
@@ -101,19 +140,19 @@ func (entry *JournalEntry) InteractiveSingleExpenseIncome(
 			},
 		},
 		{
-			Name: "sub_category",
+			Name: "subcategory",
 			Prompt: &survey.Select{
 				Message: "What is the sub-category of the transaction?",
-				Options: allSubCategories,
-				Default: allSubCategories[0],
+				Options: categoryMap.GetAllSubCategories(),
+				Default: answers.SubCategory,
 			},
 			Validate: survey.Required,
 		},
 		{
-			Name: "Amount",
+			Name: "amount",
 			Prompt: &survey.Input{
 				Message: "What is the amount?",
-				Default: "0.0",
+				Default: fmt.Sprintf("%.2f", float64(answers.Amount)/100),
 			},
 			Validate: func(ans interface{}) error {
 				str, _ := ans.(string)
@@ -128,17 +167,7 @@ func (entry *JournalEntry) InteractiveSingleExpenseIncome(
 			},
 		},
 	}
-	answers := struct {
-		Title       string
-		Desc        string
-		Date        time.Time
-		Type        string
-		AccountName string `survey:"account_name"`
-		Category    string
-		SubCategory string `survey:"sub_category"`
-		Amount      int64
-	}{}
-	if err = survey.Ask(qs, &answers); err != nil {
+	if err = survey.Ask(qs, answers); err != nil {
 		return
 	}
 	entry.Transactions = append(entry.Transactions, bookkeeper.Transaction_{
@@ -152,7 +181,52 @@ func (entry *JournalEntry) InteractiveSingleExpenseIncome(
 		},
 		AccountName: answers.AccountName,
 	})
-	entry.VerifyAndFillAccountIds(accounts)
+	return
+}
+
+func (entry *JournalEntry) InteractivePaycheck(
+	accounts []bookkeeper.Account, categoryMap CategoryMap,
+) (err error) {
+	var accountNames []string
+	for _, a := range accounts {
+		accountNames = append(accountNames, a.Name)
+	}
+	entry.Clear()
+	// some default values
+	ansBasic := TransactionBasicAnswerType{
+		Title:       "Paycheck",
+		Type:        "In",
+		Category:    "Professional Income",
+		SubCategory: "Salary",
+		AccountName: "WS PAYROLL",
+	}
+	err = entry.interactiveTransactionBasic(accountNames, categoryMap, &ansBasic)
+	if err != nil {
+		return err
+	}
+	return
+}
+
+func (entry *JournalEntry) InteractiveSingleExpenseIncome(
+	accounts []bookkeeper.Account, categoryMap CategoryMap,
+) (err error) {
+	var accountNames []string
+	for _, a := range accounts {
+		accountNames = append(accountNames, a.Name)
+	}
+	entry.Clear()
+	var answers TransactionBasicAnswerType
+	answers.Title = "Single Expense / Income"
+	answers.Type = "Out"
+	err = entry.interactiveTransactionBasic(accountNames, categoryMap, &answers)
+	if err != nil {
+		return
+	}
+	// finally check account ids
+	err = entry.VerifyAndFillAccountIds(accounts)
+	if err != nil {
+		return
+	}
 	return
 }
 

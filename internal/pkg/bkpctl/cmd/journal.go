@@ -22,12 +22,12 @@ type JournalTypeFlag enumflag.Flag
 
 const (
 	SingleExpenseIncomeJournal JournalTypeFlag = iota
-	SalaryIncomeJournal
+	PaycheckJournal
 )
 
 var JournalTypeFlagIds = map[JournalTypeFlag][]string{
 	SingleExpenseIncomeJournal: {"single"},
-	SalaryIncomeJournal:        {"salary"},
+	PaycheckJournal:            {"paycheck"},
 }
 
 var journalTypeFlag JournalTypeFlag
@@ -44,6 +44,10 @@ func initRecordCmd(rootCmd *cobra.Command) {
 	journalCmd.Flags().StringP(
 		"categories", "c", "",
 		"Path to the Category definition file (default: ./configs/category_map.json)",
+	)
+	journalCmd.Flags().StringP(
+		"payroll-config", "p", "",
+		"Path to the Payroll config file (default: ./configs/tpl/ws_payroll.json)",
 	)
 	rootCmd.AddCommand(journalCmd)
 }
@@ -99,7 +103,7 @@ func recordActivity(cmd *cobra.Command, args []string) {
 	case SingleExpenseIncomeJournal:
 		err := entry.InteractiveSingleExpenseIncome(accounts, categoryMap)
 		cobra.CheckErr(err)
-	case SalaryIncomeJournal:
+	case PaycheckJournal:
 	default:
 		cobra.CheckErr(fmt.Errorf("invalid journal type %d", journalTypeFlag))
 	}
