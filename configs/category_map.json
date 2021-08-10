@@ -1,0 +1,119 @@
+[
+    {
+        "category": "Taxes",
+        "sub_categories": [
+            "Federal Taxes",
+            "State Taxes",
+            "Property Taxes",
+            "Tax Service"
+        ]
+    },
+    {
+        "category": "Home",
+        "sub_categories": [
+            "Mortgage Interest",
+            "Loan Fees",
+            "HOA"
+        ]
+    },
+    {
+        "category": "Food & Dining",
+        "sub_categories": [
+            "Groceries",
+            "Restaurant",
+            "Coffee"
+        ]
+    },
+    {
+        "category": "Kids",
+        "sub_categories": [
+            "Baby Supplies",
+            "Daycare"
+        ]
+    },
+    {
+        "category": "Bills & Utilities",
+        "sub_categories": [
+            "Utilities",
+            "Water",
+            "Home Security"
+        ]
+    },
+    {
+        "category": "Shopping",
+        "sub_categories": [
+            "Books",
+            "Office Supplies",
+            "Furniture & Appliance",
+            "Exercise Equipment",
+            "Misc Shopping"
+        ]
+    },
+    {
+        "category": "Transportation",
+        "sub_categories": [
+            "Auto Insurance",
+            "Gasoline",
+            "Air Travel",
+            "License & Registration",
+            "Maintenance & Parts"
+        ]
+    },
+    {
+        "category": "Entertainment",
+        "sub_categories": [
+            "TV & Movies",
+            "Video Games"
+        ]
+    },
+    {
+        "category": "Communications",
+        "sub_categories": [
+            "Internet",
+            "Mobile"
+        ]
+    },
+    {
+        "category": "Medical Exp",
+        "sub_categories": [
+            "Health Insurance",
+            "Pharmacy",
+            "Doctor"
+        ]
+    },
+    {
+        "category": "Other Exp",
+        "sub_categories": [
+            "Gifts",
+            "Misc Exp",
+            "Cleaning",
+            "Financial Advisor"
+        ]
+    },
+    {
+        "category": "Professional Income",
+        "sub_categories": [
+            "Salary",
+            "RSU",
+            "Employer Match"
+        ]
+    },
+    {
+        "category": "Other Income",
+        "sub_categories": [
+            "Interest Income",
+            "Cash Back",
+            "Reimbursement",
+            "Refund",
+            "Misc Income"
+        ]
+    },
+    {
+        "category": "Investment",
+        "sub_categories": [
+            "Taxable Investment",
+            "Retirement Investment",
+            "Education Investment"
+        ]
+    }
+]
