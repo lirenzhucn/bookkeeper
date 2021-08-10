@@ -301,7 +301,7 @@ func interactiveTransactionWithPresets(
 }
 
 func (entry *JournalEntry) interactivePaycheckTaxes(
-	accountName []string, categoryMap CategoryMap,
+	accountNames []string, categoryMap CategoryMap,
 ) (err error) {
 	var trans bookkeeper.Transaction_
 	trans.Type = "Out"
@@ -319,11 +319,48 @@ func (entry *JournalEntry) interactivePaycheckTaxes(
 	if taxesCategoryInd >= 0 {
 		trans.Category = categoryMap[taxesCategoryInd].Category
 	}
-	err = interactiveTransactionWithPresets(accountName, categoryMap, &trans)
+	err = interactiveTransactionWithPresets(accountNames, categoryMap, &trans)
 	entry.Transactions = append(entry.Transactions, trans)
 	if err != nil {
 		return
 	}
+	return
+}
+
+func (entry *JournalEntry) interactivePaycheckMedicalInsurance(
+	accountNames []string, categoryMap CategoryMap,
+) (err error) {
+	var trans bookkeeper.Transaction_
+	trans.Type = "Out"
+	if len(entry.Transactions) > 0 {
+		// always assume the first transaction is the "primary" transaction
+		trans.Date = entry.Transactions[0].Date
+		trans.AccountName = entry.Transactions[0].AccountName
+	}
+	trans.Category = "Medical Exp"
+	trans.SubCategory = "Health Insurance"
+	err = interactiveTransactionWithPresets(accountNames, categoryMap, &trans)
+	entry.Transactions = append(entry.Transactions, trans)
+	if err != nil {
+		return
+	}
+	return
+}
+
+func (entry *JournalEntry) interactivePaycheckOtherExp(
+	accountNames []string, categoryMap CategoryMap,
+) (err error) {
+	var trans bookkeeper.Transaction_
+	trans.Type = "Out"
+	if len(entry.Transactions) > 0 {
+		// always assume the first transaction is the "primary" transaction
+		trans.Date = entry.Transactions[0].Date
+		trans.AccountName = entry.Transactions[0].AccountName
+	}
+	trans.Category = "Other Exp"
+	trans.SubCategory = "Misc Exp"
+	err = interactiveTransactionWithPresets(accountNames, categoryMap, &trans)
+	entry.Transactions = append(entry.Transactions, trans)
 	return
 }
 
@@ -357,10 +394,44 @@ func (entry *JournalEntry) InteractivePaycheck(
 		if !hasTaxes {
 			break
 		}
-		entry.interactivePaycheckTaxes(accountNames, categoryMap)
-		if err = entry.VerifyAndFillAccountIds(accounts); err != nil {
+		if err = entry.interactivePaycheckTaxes(
+			accountNames, categoryMap); err != nil {
 			return
 		}
+	}
+	// Medical Exp
+	for {
+		hasMedical := false
+		survey.AskOne(&survey.Confirm{
+			Message: "Want to add one (more) medical insurance expense?",
+			Default: true,
+		}, &hasMedical)
+		if !hasMedical {
+			break
+		}
+		if err = entry.interactivePaycheckMedicalInsurance(
+			accountNames, categoryMap); err != nil {
+			return
+		}
+	}
+	// Other Exp
+	for {
+		hasOtherExp := false
+		survey.AskOne(&survey.Confirm{
+			Message: "Want to add one (more) other expense?",
+			Default: true,
+		}, &hasOtherExp)
+		if !hasOtherExp {
+			break
+		}
+		if err = entry.interactivePaycheckOtherExp(
+			accountNames, categoryMap,
+		); err != nil {
+			return
+		}
+	}
+	if err = entry.VerifyAndFillAccountIds(accounts); err != nil {
+		return
 	}
 	return
 }
