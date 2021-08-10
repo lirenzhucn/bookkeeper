@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/google/uuid"
+	"github.com/leekchan/accounting"
 	"github.com/lirenzhucn/bookkeeper/internal/pkg/bookkeeper"
 )
 
@@ -59,6 +61,137 @@ func (cm CategoryMap) GetSubCategoriesByName(category string) []string {
 	return nil
 }
 
+func getTodayNoTimeZone() time.Time {
+	today, _ := time.Parse("2006/01/02", time.Now().Format("2006/01/02"))
+	return today
+}
+
+type TransferBasicAnswerType struct {
+	Title           string
+	Desc            string
+	Date            time.Time
+	FromAccountName string
+	ToAccountName   string
+	Amount          int64
+}
+
+func (entry *JournalEntry) interactiveTransferEntryBasic(
+	accountNames []string,
+	answers *TransferBasicAnswerType,
+	skipIfPreset bool,
+) (err error) {
+	var qs []*survey.Question
+	defaultDate := getTodayNoTimeZone()
+	if !reflect.ValueOf(answers.Date).IsZero() {
+		defaultDate = answers.Date
+	}
+	if !skipIfPreset || reflect.ValueOf(answers.Title).IsZero() {
+		qs = append(qs, &survey.Question{
+			Name: "title",
+			Prompt: &survey.Input{
+				Message: "A quick title of the journal entry?",
+				Default: answers.Title,
+			},
+		})
+	}
+	if !skipIfPreset || reflect.ValueOf(answers.Desc).IsZero() {
+		qs = append(qs, &survey.Question{
+			Name: "desc",
+			Prompt: &survey.Input{
+				Message: "A more detailed description",
+				Default: answers.Desc,
+			},
+		})
+	}
+	if !skipIfPreset || reflect.ValueOf(answers.Date).IsZero() {
+		qs = append(qs, &survey.Question{
+			Name: "date",
+			Prompt: &survey.Input{
+				Message: "When did this transfer happen?",
+				Default: defaultDate.Format("2006/01/02"),
+			},
+			Validate: func(ans interface{}) error {
+				str, _ := ans.(string)
+				_, err := time.Parse("2006/01/02", str)
+				return err
+			},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				str, _ := ans.(string)
+				newAns, _ = time.Parse("2006/01/02", str)
+				return
+			},
+		})
+	}
+	if !skipIfPreset || reflect.ValueOf(answers.FromAccountName).IsZero() {
+		qs = append(qs, &survey.Question{
+			Name: "fromaccountname",
+			Prompt: &survey.Select{
+				Message: "From which account is this tranfer initiated?",
+				Options: accountNames,
+				Default: answers.FromAccountName,
+			},
+		})
+	}
+	if !skipIfPreset || reflect.ValueOf(answers.ToAccountName).IsZero() {
+		qs = append(qs, &survey.Question{
+			Name: "toaccountname",
+			Prompt: &survey.Select{
+				Message: "To which account is this tranfer destinated?",
+				Options: accountNames,
+				Default: answers.ToAccountName,
+			},
+		})
+	}
+	// always ask for amount
+	qs = append(qs, &survey.Question{
+		Name: "amount",
+		Prompt: &survey.Input{
+			Message: "What is the amount?",
+			Default: fmt.Sprintf("%.2f", float64(answers.Amount)/100),
+		},
+		Validate: func(ans interface{}) error {
+			str, _ := ans.(string)
+			_, err := strconv.ParseFloat(str, 64)
+			return err
+		},
+		Transform: func(ans interface{}) (newAns interface{}) {
+			str, _ := ans.(string)
+			val, _ := strconv.ParseFloat(str, 64)
+			newAns = int64(val * 100)
+			return
+		},
+	})
+	if err = survey.Ask(qs, answers); err != nil {
+		return
+	}
+	u, err := uuid.NewUUID()
+	if err != nil {
+		return
+	}
+	associationId := u.String()
+	entry.Transactions = append(entry.Transactions, bookkeeper.Transaction_{
+		Transaction: bookkeeper.Transaction{
+			Type:          "TransferOut",
+			Date:          answers.Date,
+			Amount:        -answers.Amount, // flip the amount for the FROM account
+			Notes:         answers.Title + ";" + answers.Desc + ";From",
+			AssociationId: associationId,
+		},
+		AccountName: answers.FromAccountName,
+	})
+	entry.Transactions = append(entry.Transactions, bookkeeper.Transaction_{
+		Transaction: bookkeeper.Transaction{
+			Type:          "TransferIn",
+			Date:          answers.Date,
+			Amount:        answers.Amount,
+			Notes:         answers.Title + ";" + answers.Desc + ";To",
+			AssociationId: associationId,
+		},
+		AccountName: answers.ToAccountName,
+	})
+	return
+}
+
 type TransactionBasicAnswerType struct {
 	Title       string
 	Desc        string
@@ -75,7 +208,7 @@ func (entry *JournalEntry) interactiveJournalEntryBasic(
 	answers *TransactionBasicAnswerType,
 ) (err error) {
 	var qs []*survey.Question
-	defaultDate := time.Now().UTC()
+	defaultDate := getTodayNoTimeZone()
 	if !reflect.ValueOf(answers.Date).IsZero() {
 		defaultDate = answers.Date
 	}
@@ -347,6 +480,16 @@ func (entry *JournalEntry) interactivePaycheckMedicalInsurance(
 	return
 }
 
+func (entry *JournalEntry) balanceOnAccount(accountName string) int64 {
+	var balance int64 = 0
+	for _, trans := range entry.Transactions {
+		if trans.AccountName == accountName {
+			balance += trans.Amount
+		}
+	}
+	return balance
+}
+
 func (entry *JournalEntry) interactivePaycheckOtherExp(
 	accountNames []string, categoryMap CategoryMap,
 ) (err error) {
@@ -426,6 +569,32 @@ func (entry *JournalEntry) InteractivePaycheck(
 		}
 		if err = entry.interactivePaycheckOtherExp(
 			accountNames, categoryMap,
+		); err != nil {
+			return
+		}
+	}
+	// Transfers
+	ac := accounting.Accounting{Symbol: "$", Precision: 2}
+	for {
+		balance := entry.balanceOnAccount(ansBasic.AccountName)
+		hasTransfer := false
+		survey.AskOne(&survey.Confirm{
+			Message: fmt.Sprintf(
+				"Want to add one (more) transfer (%s remaining)?",
+				ac.FormatMoney(float64(balance)/100),
+			),
+			Default: balance == 0,
+		}, &hasTransfer)
+		if !hasTransfer {
+			break
+		}
+		ansTransfer := TransferBasicAnswerType{
+			Date:            ansBasic.Date,
+			FromAccountName: ansBasic.AccountName,
+			Amount:          balance,
+		}
+		if err = entry.interactiveTransferEntryBasic(
+			accountNames, &ansTransfer, true,
 		); err != nil {
 			return
 		}
