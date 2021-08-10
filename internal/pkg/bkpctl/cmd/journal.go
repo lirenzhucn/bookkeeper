@@ -23,11 +23,13 @@ type JournalTypeFlag enumflag.Flag
 const (
 	SingleExpenseIncomeJournal JournalTypeFlag = iota
 	PaycheckJournal
+	SingleTransferJournal
 )
 
 var JournalTypeFlagIds = map[JournalTypeFlag][]string{
 	SingleExpenseIncomeJournal: {"single"},
 	PaycheckJournal:            {"paycheck"},
+	SingleTransferJournal:      {"transfer"},
 }
 
 var journalTypeFlag JournalTypeFlag
@@ -105,6 +107,9 @@ func recordActivity(cmd *cobra.Command, args []string) {
 		cobra.CheckErr(err)
 	case PaycheckJournal:
 		err := entry.InteractivePaycheck(accounts, categoryMap)
+		cobra.CheckErr(err)
+	case SingleTransferJournal:
+		err := entry.InteractiveTransfer(accounts)
 		cobra.CheckErr(err)
 	default:
 		cobra.CheckErr(fmt.Errorf("invalid journal type %d", journalTypeFlag))
