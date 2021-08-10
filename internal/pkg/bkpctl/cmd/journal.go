@@ -104,6 +104,8 @@ func recordActivity(cmd *cobra.Command, args []string) {
 		err := entry.InteractiveSingleExpenseIncome(accounts, categoryMap)
 		cobra.CheckErr(err)
 	case PaycheckJournal:
+		err := entry.InteractivePaycheck(accounts, categoryMap)
+		cobra.CheckErr(err)
 	default:
 		cobra.CheckErr(fmt.Errorf("invalid journal type %d", journalTypeFlag))
 	}
