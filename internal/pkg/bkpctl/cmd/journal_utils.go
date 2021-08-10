@@ -642,6 +642,25 @@ func (entry *JournalEntry) InteractiveSingleExpenseIncome(
 	return
 }
 
+func (entry *JournalEntry) InteractiveTransfer(
+	accounts []bookkeeper.Account) (err error) {
+	var accountNames []string
+	for _, a := range accounts {
+		accountNames = append(accountNames, a.Name)
+	}
+	entry.Clear()
+	entry.Validators = []string{"transfer_match"}
+	answers := TransferBasicAnswerType{Title: "Single Transfer"}
+	if err = entry.interactiveTransferEntryBasic(
+		accountNames, &answers, false); err != nil {
+		return
+	}
+	if err = entry.VerifyAndFillAccountIds(accounts); err != nil {
+		return
+	}
+	return
+}
+
 func (entry *JournalEntry) InteractiveConfirm() bool {
 	tablePrintTransactions(entry.Transactions)
 	confirmed := false
