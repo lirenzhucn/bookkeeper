@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/fatih/color"
 	"github.com/google/uuid"
 	"github.com/leekchan/accounting"
 	"github.com/lirenzhucn/bookkeeper/internal/pkg/bookkeeper"
@@ -89,7 +90,7 @@ func (entry *JournalEntry) interactiveTransferEntryBasic(
 		qs = append(qs, &survey.Question{
 			Name: "title",
 			Prompt: &survey.Input{
-				Message: "A quick title of the journal entry?",
+				Message: "A quick title of this transfer?",
 				Default: answers.Title,
 			},
 		})
@@ -515,6 +516,8 @@ func (entry *JournalEntry) InteractivePaycheck(
 		accountNames = append(accountNames, a.Name)
 	}
 	entry.Clear()
+	// add validators for this type of journal entry
+	entry.Validators = []string{"transfer_match"}
 	// some default values
 	ansBasic := TransactionBasicAnswerType{
 		Title:       "Paycheck",
@@ -523,10 +526,15 @@ func (entry *JournalEntry) InteractivePaycheck(
 		SubCategory: "Salary",
 		AccountName: "WS PAYROLL",
 	}
+	colorHeading := color.New(color.FgCyan).Add(color.Bold).Add(color.Underline)
+	colorHeading.Println("Some general info of the paycheck")
 	err = entry.interactiveJournalEntryBasic(accountNames, categoryMap, &ansBasic)
 	if err != nil {
 		return
 	}
+	// add zero balance validtor for the primary account
+	entry.Validators = append(entry.Validators, "zero_balance:"+ansBasic.AccountName)
+	colorHeading.Println("Now, let's record some taxes...")
 	// Taxes
 	for {
 		hasTaxes := false
@@ -542,6 +550,7 @@ func (entry *JournalEntry) InteractivePaycheck(
 			return
 		}
 	}
+	colorHeading.Println("Let's record healthcare insurance expenses...")
 	// Medical Exp
 	for {
 		hasMedical := false
@@ -557,6 +566,7 @@ func (entry *JournalEntry) InteractivePaycheck(
 			return
 		}
 	}
+	colorHeading.Println("Any other expenses that are on the paycheck?")
 	// Other Exp
 	for {
 		hasOtherExp := false
@@ -573,6 +583,7 @@ func (entry *JournalEntry) InteractivePaycheck(
 			return
 		}
 	}
+	colorHeading.Println("Now, let's put our money to where they belong...")
 	// Transfers
 	ac := accounting.Accounting{Symbol: "$", Precision: 2}
 	for {
@@ -583,7 +594,7 @@ func (entry *JournalEntry) InteractivePaycheck(
 				"Want to add one (more) transfer (%s remaining)?",
 				ac.FormatMoney(float64(balance)/100),
 			),
-			Default: balance == 0,
+			Default: balance != 0,
 		}, &hasTransfer)
 		if !hasTransfer {
 			break
@@ -600,6 +611,9 @@ func (entry *JournalEntry) InteractivePaycheck(
 		}
 	}
 	if err = entry.VerifyAndFillAccountIds(accounts); err != nil {
+		return
+	}
+	if err = entry.Validate(); err != nil {
 		return
 	}
 	return

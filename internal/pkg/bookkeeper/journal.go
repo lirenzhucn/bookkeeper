@@ -50,13 +50,15 @@ func (entry *JournalEntry) Init(numTransactions int) {
 
 func (entry *JournalEntry) Validate() error {
 	for _, validator := range entry.Validators {
-		switch strings.ToLower(validator) {
-		case "transfer_match":
+		validator = strings.ToLower(validator)
+		switch {
+		case validator == "transfer_match":
 			if err := entry.IsTransferMatch(); err != nil {
 				return err
 			}
-		case "zero_balance":
-			if err := entry.IsZeroBalance(); err != nil {
+		case strings.HasPrefix(validator, "zero_balance:"):
+			accountName := strings.SplitN(validator, ":", 2)[1]
+			if err := entry.IsZeroBalance(accountName); err != nil {
 				return err
 			}
 		}
@@ -93,10 +95,12 @@ func (entry *JournalEntry) IsTransferMatch() error {
 	return nil
 }
 
-func (entry *JournalEntry) IsZeroBalance() error {
+func (entry *JournalEntry) IsZeroBalance(accountName string) error {
 	var val int64 = 0
 	for _, trans := range entry.Transactions {
-		val += trans.Amount
+		if trans.AccountName == accountName {
+			val += trans.Amount
+		}
 	}
 	if val != 0 {
 		return JournalEntryValidationError{
