@@ -208,124 +208,33 @@ func (entry *JournalEntry) interactiveJournalEntryBasic(
 	accountNames []string, categoryMap CategoryMap,
 	answers *TransactionBasicAnswerType,
 ) (err error) {
-	var qs []*survey.Question
-	defaultDate := getTodayNoTimeZone()
-	if !reflect.ValueOf(answers.Date).IsZero() {
-		defaultDate = answers.Date
-	}
-	qs = []*survey.Question{
-		{
-			Name: "title",
-			Prompt: &survey.Input{
-				Message: "A quick title of the journal entry?",
-				Default: answers.Title,
-			},
-		},
-		{
-			Name: "desc",
-			Prompt: &survey.Input{
-				Message: "A more detailed description",
-				Default: answers.Desc,
-			},
-		},
-		{
-			Name: "date",
-			Prompt: &survey.Input{
-				Message: "When did this transaction happen?",
-				Default: defaultDate.Format("2006/01/02"),
-			},
-			Validate: func(ans interface{}) error {
-				str, _ := ans.(string)
-				_, err := time.Parse("2006/01/02", str)
-				return err
-			},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				str, _ := ans.(string)
-				newAns, _ = time.Parse("2006/01/02", str)
-				return
-			},
-		},
-		{
-			Name: "type",
-			Prompt: &survey.Select{
-				Message: "Choose a transaction type:",
-				Options: bookkeeper.VALID_TRANSACTION_TYPES,
-				Default: answers.Type,
-			},
-		},
-		{
-			Name: "accountname",
-			Prompt: &survey.Select{
-				Message: "What is the account used?",
-				Options: accountNames,
-				Default: answers.AccountName,
-			},
-		},
-		{
-			Name: "category",
-			Prompt: &survey.Select{
-				Message: "What is the category of the transaction?",
-				Options: categoryMap.GetAllCategories(),
-				Default: answers.Category,
-			},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				// a hacky hook to narrow down sub-category
-				c, _ := ans.(survey.OptionAnswer)
-				for _, q := range qs {
-					if q.Name == "subcategory" {
-						p, ok := q.Prompt.(*survey.Select)
-						if !ok {
-							continue
-						}
-						p.Options = categoryMap.GetSubCategoriesByIndex(c.Index)
-					}
-				}
-				newAns = ans
-				return
-			},
-		},
-		{
-			Name: "subcategory",
-			Prompt: &survey.Select{
-				Message: "What is the sub-category of the transaction?",
-				Options: categoryMap.GetAllSubCategories(),
-				Default: answers.SubCategory,
-			},
-			Validate: survey.Required,
-		},
-		{
-			Name: "amount",
-			Prompt: &survey.Input{
-				Message: "What is the amount?",
-				Default: fmt.Sprintf("%.2f", float64(answers.Amount)/100),
-			},
-			Validate: func(ans interface{}) error {
-				str, _ := ans.(string)
-				_, err := strconv.ParseFloat(str, 64)
-				return err
-			},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				str, _ := ans.(string)
-				val, _ := strconv.ParseFloat(str, 64)
-				newAns = int64(val * 100)
-				return
-			},
-		},
-	}
-	if err = survey.Ask(qs, answers); err != nil {
+	if err = survey.AskOne(&survey.Input{
+		Message: "A quick title of the journal entry?",
+		Default: answers.Title,
+	}, &answers.Title); err != nil {
 		return
 	}
-	entry.Transactions = append(entry.Transactions, bookkeeper.Transaction_{
+	if err = survey.AskOne(&survey.Input{
+		Message: "A more detailed description",
+		Default: answers.Desc,
+	}, &answers.Desc); err != nil {
+		return
+	}
+	entry.Title = answers.Title
+	entry.Desc = answers.Desc
+	trans := bookkeeper.Transaction_{
 		Transaction: bookkeeper.Transaction{
-			Type:        answers.Type,
 			Date:        answers.Date,
+			Type:        answers.Type,
 			Category:    answers.Category,
 			SubCategory: answers.SubCategory,
 			Amount:      answers.Amount,
-			Notes:       answers.Title + ";" + answers.Desc,
 		},
 		AccountName: answers.AccountName,
-	})
+	}
+	interactiveTransactionWithPresets(accountNames, categoryMap, &trans, false)
+	trans.Notes = answers.Title + ";" + answers.Desc + ";" + trans.Notes
+	entry.Transactions = append(entry.Transactions, trans)
 	return
 }
 
@@ -334,49 +243,34 @@ func interactiveTransactionWithPresets(
 	accountNames []string,
 	categoryMap CategoryMap,
 	trans *bookkeeper.Transaction_,
+	skipIfPreset bool,
 ) (err error) {
-	var qs []*survey.Question
-	if reflect.ValueOf(trans.Type).IsZero() {
-		qs = append(qs, &survey.Question{
-			Name: "type",
-			Prompt: &survey.Select{
-				Message: "Choose a transaction type",
-				Options: bookkeeper.VALID_TRANSACTION_TYPES,
-			},
-		})
+	if !skipIfPreset || reflect.ValueOf(trans.Type).IsZero() {
+		if err = survey.AskOne(&survey.Select{
+			Message: "Choose a transaction type",
+			Options: bookkeeper.VALID_TRANSACTION_TYPES,
+			Default: trans.Type,
+		}, &trans.Type); err != nil {
+			return
+		}
 	}
-	if reflect.ValueOf(trans.AccountName).IsZero() {
-		qs = append(qs, &survey.Question{
-			Name: "accountname",
-			Prompt: &survey.Select{
-				Message: "What is the account used?",
-				Options: accountNames,
-			},
-		})
+	if !skipIfPreset || reflect.ValueOf(trans.AccountName).IsZero() {
+		if err = survey.AskOne(&survey.Select{
+			Message: "What is the account used?",
+			Options: accountNames,
+			Default: trans.AccountName,
+		}, &trans.AccountName); err != nil {
+			return
+		}
 	}
-	if reflect.ValueOf(trans.Category).IsZero() {
-		qs = append(qs, &survey.Question{
-			Name: "category",
-			Prompt: &survey.Select{
-				Message: "What is the category?",
-				Options: categoryMap.GetAllCategories(),
-			},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				// a hacky hook to narrow down sub-category
-				c, _ := ans.(survey.OptionAnswer)
-				for _, q := range qs {
-					if q.Name == "subcategory" {
-						p, ok := q.Prompt.(*survey.Select)
-						if !ok {
-							continue
-						}
-						p.Options = categoryMap.GetSubCategoriesByIndex(c.Index)
-					}
-				}
-				newAns = ans
-				return
-			},
-		})
+	if !skipIfPreset || reflect.ValueOf(trans.Category).IsZero() {
+		if err = survey.AskOne(&survey.Select{
+			Message: "What is the category?",
+			Options: categoryMap.GetAllCategories(),
+			Default: trans.Category,
+		}, &trans.Category); err != nil {
+			return
+		}
 	}
 	subCategories := categoryMap.GetAllSubCategories()
 	if !reflect.ValueOf(trans.Category).IsZero() {
@@ -387,44 +281,40 @@ func interactiveTransactionWithPresets(
 			}
 		}
 	}
-	if reflect.ValueOf(trans.SubCategory).IsZero() {
-		qs = append(qs, &survey.Question{
-			Name: "subcategory",
-			Prompt: &survey.Select{
-				Message: "What is the sub-category",
-				Options: subCategories,
-			},
-		})
+	if !skipIfPreset || reflect.ValueOf(trans.SubCategory).IsZero() {
+		if err = survey.AskOne(&survey.Select{
+			Message: "What is the sub-category",
+			Options: subCategories,
+			Default: trans.SubCategory,
+		}, &trans.SubCategory); err != nil {
+			return
+		}
 	}
-	// always ask about the amount
-	qs = append(qs, &survey.Question{
-		Name: "amount",
-		Prompt: &survey.Input{
-			Message: "What is the amount?",
-			Default: "0.00",
-		},
-		Validate: func(ans interface{}) error {
+	var amountStr string
+	if err = survey.AskOne(&survey.Input{
+		Message: "What is the amount?",
+		Default: "0.00",
+	},
+		&amountStr,
+		survey.WithValidator(func(ans interface{}) error {
 			str, _ := ans.(string)
 			_, err := strconv.ParseFloat(str, 64)
 			return err
-		},
-		Transform: func(ans interface{}) (newAns interface{}) {
-			str, _ := ans.(string)
-			val, _ := strconv.ParseFloat(str, 64)
-			newAns = int64(val * 100)
-			return
-		},
-	})
-	if reflect.ValueOf(trans.Notes).IsZero() {
-		qs = append(qs, &survey.Question{
-			Name: "notes",
-			Prompt: &survey.Input{
-				Message: "Any additional notes?",
-			},
-		})
-	}
-	if err = survey.Ask(qs, trans); err != nil {
+		})); err != nil {
 		return
+	}
+	val, err := strconv.ParseFloat(amountStr, 64)
+	if err != nil {
+		return
+	}
+	trans.Amount = int64(val * 100)
+	if !skipIfPreset || reflect.ValueOf(trans.Notes).IsZero() {
+		if err = survey.AskOne(&survey.Input{
+			Message: "Any additional notes?",
+			Default: trans.Notes,
+		}, &trans.Notes); err != nil {
+			return
+		}
 	}
 	// NOTE: flip any out-going transaction amounts
 	if trans.Type == "TransferOut" || trans.Type == "Out" ||
@@ -453,7 +343,7 @@ func (entry *JournalEntry) interactivePaycheckTaxes(
 	if taxesCategoryInd >= 0 {
 		trans.Category = categoryMap[taxesCategoryInd].Category
 	}
-	err = interactiveTransactionWithPresets(accountNames, categoryMap, &trans)
+	err = interactiveTransactionWithPresets(accountNames, categoryMap, &trans, true)
 	entry.Transactions = append(entry.Transactions, trans)
 	if err != nil {
 		return
@@ -473,7 +363,7 @@ func (entry *JournalEntry) interactivePaycheckMedicalInsurance(
 	}
 	trans.Category = "Medical Exp"
 	trans.SubCategory = "Health Insurance"
-	err = interactiveTransactionWithPresets(accountNames, categoryMap, &trans)
+	err = interactiveTransactionWithPresets(accountNames, categoryMap, &trans, true)
 	entry.Transactions = append(entry.Transactions, trans)
 	if err != nil {
 		return
@@ -503,7 +393,7 @@ func (entry *JournalEntry) interactivePaycheckOtherExp(
 	}
 	trans.Category = "Other Exp"
 	trans.SubCategory = "Misc Exp"
-	err = interactiveTransactionWithPresets(accountNames, categoryMap, &trans)
+	err = interactiveTransactionWithPresets(accountNames, categoryMap, &trans, true)
 	entry.Transactions = append(entry.Transactions, trans)
 	return
 }
@@ -619,6 +509,35 @@ func (entry *JournalEntry) InteractivePaycheck(
 	return
 }
 
+// a callback to get the account balance by its name
+type AccountBalanceCallback func(accountName string, date string) (balance int64, err error)
+
+func (entry *JournalEntry) InteractiveInvest(
+	accounts []bookkeeper.Account,
+	categoryMap CategoryMap,
+	callback AccountBalanceCallback,
+) (err error) {
+	var accountNames []string
+	for _, a := range accounts {
+		accountNames = append(accountNames, a.Name)
+	}
+	entry.Clear()
+	answers := TransactionBasicAnswerType{
+		Type:     "In",
+		Category: "Investment",
+	}
+	var accountBalance int64 = 0
+	entry.interactiveJournalEntryBasic(accountNames, categoryMap, &answers)
+	if len(entry.Transactions) > 0 {
+		trans := &entry.Transactions[len(entry.Transactions)-1]
+		trans.Amount = trans.Amount - accountBalance
+	}
+	if err = entry.VerifyAndFillAccountIds(accounts); err != nil {
+		return
+	}
+	return
+}
+
 func (entry *JournalEntry) InteractiveSingleExpenseIncome(
 	accounts []bookkeeper.Account, categoryMap CategoryMap,
 ) (err error) {
@@ -627,9 +546,10 @@ func (entry *JournalEntry) InteractiveSingleExpenseIncome(
 		accountNames = append(accountNames, a.Name)
 	}
 	entry.Clear()
-	var answers TransactionBasicAnswerType
-	answers.Title = "Single Expense / Income"
-	answers.Type = "Out"
+	answers := TransactionBasicAnswerType{
+		Title: "Single Expense / Income",
+		Type:  "Out",
+	}
 	err = entry.interactiveJournalEntryBasic(accountNames, categoryMap, &answers)
 	if err != nil {
 		return
