@@ -116,7 +116,6 @@ func recordActivity(cmd *cobra.Command, args []string) {
 	case InvestActivityJournal:
 		err := entry.InteractiveInvest(accounts, categoryMap,
 			func(accountName string, date string) (balance int64, err error) {
-				fmt.Printf("account = %s; date = %s\n", accountName, date)
 				account_, err := singleAccountBalance(accountName, date)
 				balance = account_.Balance
 				return
