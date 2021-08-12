@@ -282,6 +282,9 @@ func interactiveTransactionWithPresets(
 			return
 		}
 	}
+	if reflect.ValueOf(trans.Type).IsZero() {
+		trans.Type = bookkeeper.VALID_TRANSACTION_TYPES[0]
+	}
 	if !skipIfPreset || reflect.ValueOf(trans.Type).IsZero() {
 		if err = survey.AskOne(&survey.Select{
 			Message: mergedMessages["Type"],
@@ -291,6 +294,9 @@ func interactiveTransactionWithPresets(
 			return
 		}
 	}
+	if reflect.ValueOf(trans.AccountName).IsZero() {
+		trans.AccountName = accountNames[0]
+	}
 	if !skipIfPreset || reflect.ValueOf(trans.AccountName).IsZero() {
 		if err = survey.AskOne(&survey.Select{
 			Message: mergedMessages["AccountName"],
@@ -299,6 +305,9 @@ func interactiveTransactionWithPresets(
 		}, &trans.AccountName); err != nil {
 			return
 		}
+	}
+	if reflect.ValueOf(trans.Category).IsZero() {
+		trans.Category = categoryMap.GetAllCategories()[0]
 	}
 	if !skipIfPreset || reflect.ValueOf(trans.Category).IsZero() {
 		if err = survey.AskOne(&survey.Select{
@@ -317,6 +326,9 @@ func interactiveTransactionWithPresets(
 				break
 			}
 		}
+	}
+	if reflect.ValueOf(trans.SubCategory).IsZero() {
+		trans.SubCategory = subCategories[0]
 	}
 	if !skipIfPreset || reflect.ValueOf(trans.SubCategory).IsZero() {
 		if err = survey.AskOne(&survey.Select{
@@ -339,10 +351,10 @@ func interactiveTransactionWithPresets(
 		mergedMessages["Amount"] += fmt.Sprintf(" (current balance %s)",
 			ac.FormatMoney(float64(balance)/100))
 	}
-	var amountStr string
+	amountStr := fmt.Sprintf("%.2f", float64(balance)/100)
 	if err = survey.AskOne(&survey.Input{
 		Message: mergedMessages["Amount"],
-		Default: "0.00",
+		Default: amountStr,
 	},
 		&amountStr,
 		survey.WithValidator(func(ans interface{}) error {
