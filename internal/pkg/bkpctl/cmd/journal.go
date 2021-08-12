@@ -24,12 +24,14 @@ const (
 	SingleExpenseIncomeJournal JournalTypeFlag = iota
 	PaycheckJournal
 	SingleTransferJournal
+	InvestActivityJournal
 )
 
 var JournalTypeFlagIds = map[JournalTypeFlag][]string{
 	SingleExpenseIncomeJournal: {"single"},
 	PaycheckJournal:            {"paycheck"},
 	SingleTransferJournal:      {"transfer"},
+	InvestActivityJournal:      {"invest", "investment", "gain", "loss"},
 }
 
 var journalTypeFlag JournalTypeFlag
@@ -110,6 +112,14 @@ func recordActivity(cmd *cobra.Command, args []string) {
 		cobra.CheckErr(err)
 	case SingleTransferJournal:
 		err := entry.InteractiveTransfer(accounts)
+		cobra.CheckErr(err)
+	case InvestActivityJournal:
+		err := entry.InteractiveInvest(accounts, categoryMap,
+			func(accountName string, date string) (balance int64, err error) {
+				account_, err := singleAccountBalance(accountName, date)
+				balance = account_.Balance
+				return
+			})
 		cobra.CheckErr(err)
 	default:
 		cobra.CheckErr(fmt.Errorf("invalid journal type %d", journalTypeFlag))

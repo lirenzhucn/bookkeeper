@@ -11,7 +11,8 @@ var rootCmd = &cobra.Command{
 and manage the bookkeeper backend.`,
 }
 
-var BASE_URL = "http://localhost:10000/"
+const BASE_URL string = "http://localhost:10000/"
+const BKPCTL_DATE_FORMAT string = "2006/01/02"
 
 func Execute() error {
 	return rootCmd.Execute()
