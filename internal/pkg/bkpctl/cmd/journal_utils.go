@@ -63,7 +63,7 @@ func (cm CategoryMap) GetSubCategoriesByName(category string) []string {
 }
 
 func getTodayNoTimeZone() time.Time {
-	today, _ := time.Parse("2006/01/02", time.Now().Format("2006/01/02"))
+	today, _ := time.Parse(BKPCTL_DATE_FORMAT, time.Now().Format(BKPCTL_DATE_FORMAT))
 	return today
 }
 
@@ -109,16 +109,16 @@ func (entry *JournalEntry) interactiveTransferEntryBasic(
 			Name: "date",
 			Prompt: &survey.Input{
 				Message: "When did this transfer happen?",
-				Default: defaultDate.Format("2006/01/02"),
+				Default: defaultDate.Format(BKPCTL_DATE_FORMAT),
 			},
 			Validate: func(ans interface{}) error {
 				str, _ := ans.(string)
-				_, err := time.Parse("2006/01/02", str)
+				_, err := time.Parse(BKPCTL_DATE_FORMAT, str)
 				return err
 			},
 			Transform: func(ans interface{}) (newAns interface{}) {
 				str, _ := ans.(string)
-				newAns, _ = time.Parse("2006/01/02", str)
+				newAns, _ = time.Parse(BKPCTL_DATE_FORMAT, str)
 				return
 			},
 		})
@@ -205,8 +205,11 @@ type TransactionBasicAnswerType struct {
 }
 
 func (entry *JournalEntry) interactiveJournalEntryBasic(
-	accountNames []string, categoryMap CategoryMap,
+	accountNames []string,
+	categoryMap CategoryMap,
 	answers *TransactionBasicAnswerType,
+	messages map[string]string,
+	accountBalanceCallback AccountBalanceCallback,
 ) (err error) {
 	if err = survey.AskOne(&survey.Input{
 		Message: "A quick title of the journal entry?",
@@ -232,7 +235,8 @@ func (entry *JournalEntry) interactiveJournalEntryBasic(
 		},
 		AccountName: answers.AccountName,
 	}
-	interactiveTransactionWithPresets(accountNames, categoryMap, &trans, false)
+	interactiveTransactionWithPresets(accountNames, categoryMap, &trans,
+		messages, false, accountBalanceCallback)
 	trans.Notes = answers.Title + ";" + answers.Desc + ";" + trans.Notes
 	entry.Transactions = append(entry.Transactions, trans)
 	return
@@ -243,11 +247,44 @@ func interactiveTransactionWithPresets(
 	accountNames []string,
 	categoryMap CategoryMap,
 	trans *bookkeeper.Transaction_,
+	messages map[string]string,
 	skipIfPreset bool,
+	accountBalanceCallback AccountBalanceCallback,
 ) (err error) {
+	mergedMessages := map[string]string{
+		"Date":        "When did the transaction happen?",
+		"Type":        "Choose a transaction type",
+		"AccountName": "What is the account used?",
+		"Category":    "What is the category?",
+		"SubCategory": "What is the sub-category?",
+		"Amount":      "What is the amount?",
+		"Notes":       "Any additional notes?",
+	}
+	for k, v := range messages {
+		mergedMessages[k] = v
+	}
+	dateStr := getTodayNoTimeZone().Format(BKPCTL_DATE_FORMAT)
+	if !reflect.ValueOf(trans.Date).IsZero() {
+		dateStr = trans.Date.Format(BKPCTL_DATE_FORMAT)
+	}
+	if !skipIfPreset || reflect.ValueOf(trans.Date).IsZero() {
+		if err = survey.AskOne(&survey.Input{
+			Message: mergedMessages["Date"],
+			Default: dateStr,
+		}, &dateStr, survey.WithValidator(func(ans interface{}) error {
+			str, _ := ans.(string)
+			_, err := time.Parse(BKPCTL_DATE_FORMAT, str)
+			return err
+		})); err != nil {
+			return
+		}
+		if trans.Date, err = time.Parse(BKPCTL_DATE_FORMAT, dateStr); err != nil {
+			return
+		}
+	}
 	if !skipIfPreset || reflect.ValueOf(trans.Type).IsZero() {
 		if err = survey.AskOne(&survey.Select{
-			Message: "Choose a transaction type",
+			Message: mergedMessages["Type"],
 			Options: bookkeeper.VALID_TRANSACTION_TYPES,
 			Default: trans.Type,
 		}, &trans.Type); err != nil {
@@ -256,7 +293,7 @@ func interactiveTransactionWithPresets(
 	}
 	if !skipIfPreset || reflect.ValueOf(trans.AccountName).IsZero() {
 		if err = survey.AskOne(&survey.Select{
-			Message: "What is the account used?",
+			Message: mergedMessages["AccountName"],
 			Options: accountNames,
 			Default: trans.AccountName,
 		}, &trans.AccountName); err != nil {
@@ -265,7 +302,7 @@ func interactiveTransactionWithPresets(
 	}
 	if !skipIfPreset || reflect.ValueOf(trans.Category).IsZero() {
 		if err = survey.AskOne(&survey.Select{
-			Message: "What is the category?",
+			Message: mergedMessages["Category"],
 			Options: categoryMap.GetAllCategories(),
 			Default: trans.Category,
 		}, &trans.Category); err != nil {
@@ -283,16 +320,28 @@ func interactiveTransactionWithPresets(
 	}
 	if !skipIfPreset || reflect.ValueOf(trans.SubCategory).IsZero() {
 		if err = survey.AskOne(&survey.Select{
-			Message: "What is the sub-category",
+			Message: mergedMessages["SubCategory"],
 			Options: subCategories,
 			Default: trans.SubCategory,
 		}, &trans.SubCategory); err != nil {
 			return
 		}
 	}
+	var balance int64 = 0
+	// set previous amount
+	if accountBalanceCallback != nil {
+		balance, err = accountBalanceCallback(trans.AccountName,
+			trans.Date.Format(BKPCTL_DATE_FORMAT))
+		if err != nil {
+			return
+		}
+		ac := accounting.Accounting{Symbol: "$", Precision: 2}
+		mergedMessages["Amount"] += fmt.Sprintf(" (current balance %s)",
+			ac.FormatMoney(float64(balance)/100))
+	}
 	var amountStr string
 	if err = survey.AskOne(&survey.Input{
-		Message: "What is the amount?",
+		Message: mergedMessages["Amount"],
 		Default: "0.00",
 	},
 		&amountStr,
@@ -307,10 +356,10 @@ func interactiveTransactionWithPresets(
 	if err != nil {
 		return
 	}
-	trans.Amount = int64(val * 100)
+	trans.Amount = int64(val*100) - balance
 	if !skipIfPreset || reflect.ValueOf(trans.Notes).IsZero() {
 		if err = survey.AskOne(&survey.Input{
-			Message: "Any additional notes?",
+			Message: mergedMessages["Notes"],
 			Default: trans.Notes,
 		}, &trans.Notes); err != nil {
 			return
@@ -343,7 +392,7 @@ func (entry *JournalEntry) interactivePaycheckTaxes(
 	if taxesCategoryInd >= 0 {
 		trans.Category = categoryMap[taxesCategoryInd].Category
 	}
-	err = interactiveTransactionWithPresets(accountNames, categoryMap, &trans, true)
+	err = interactiveTransactionWithPresets(accountNames, categoryMap, &trans, nil, true, nil)
 	entry.Transactions = append(entry.Transactions, trans)
 	if err != nil {
 		return
@@ -363,7 +412,7 @@ func (entry *JournalEntry) interactivePaycheckMedicalInsurance(
 	}
 	trans.Category = "Medical Exp"
 	trans.SubCategory = "Health Insurance"
-	err = interactiveTransactionWithPresets(accountNames, categoryMap, &trans, true)
+	err = interactiveTransactionWithPresets(accountNames, categoryMap, &trans, nil, true, nil)
 	entry.Transactions = append(entry.Transactions, trans)
 	if err != nil {
 		return
@@ -393,7 +442,7 @@ func (entry *JournalEntry) interactivePaycheckOtherExp(
 	}
 	trans.Category = "Other Exp"
 	trans.SubCategory = "Misc Exp"
-	err = interactiveTransactionWithPresets(accountNames, categoryMap, &trans, true)
+	err = interactiveTransactionWithPresets(accountNames, categoryMap, &trans, nil, true, nil)
 	entry.Transactions = append(entry.Transactions, trans)
 	return
 }
@@ -418,7 +467,7 @@ func (entry *JournalEntry) InteractivePaycheck(
 	}
 	colorHeading := color.New(color.FgCyan).Add(color.Bold).Add(color.Underline)
 	colorHeading.Println("Some general info of the paycheck")
-	err = entry.interactiveJournalEntryBasic(accountNames, categoryMap, &ansBasic)
+	err = entry.interactiveJournalEntryBasic(accountNames, categoryMap, &ansBasic, nil, nil)
 	if err != nil {
 		return
 	}
@@ -526,12 +575,9 @@ func (entry *JournalEntry) InteractiveInvest(
 		Type:     "In",
 		Category: "Investment",
 	}
-	var accountBalance int64 = 0
-	entry.interactiveJournalEntryBasic(accountNames, categoryMap, &answers)
-	if len(entry.Transactions) > 0 {
-		trans := &entry.Transactions[len(entry.Transactions)-1]
-		trans.Amount = trans.Amount - accountBalance
-	}
+	entry.interactiveJournalEntryBasic(
+		accountNames, categoryMap, &answers,
+		map[string]string{"Amount": "What is the ending balance?"}, callback)
 	if err = entry.VerifyAndFillAccountIds(accounts); err != nil {
 		return
 	}
@@ -550,7 +596,7 @@ func (entry *JournalEntry) InteractiveSingleExpenseIncome(
 		Title: "Single Expense / Income",
 		Type:  "Out",
 	}
-	err = entry.interactiveJournalEntryBasic(accountNames, categoryMap, &answers)
+	err = entry.interactiveJournalEntryBasic(accountNames, categoryMap, &answers, nil, nil)
 	if err != nil {
 		return
 	}
