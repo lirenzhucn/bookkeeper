@@ -88,6 +88,10 @@ Condition <- f:"date" _ o:Op _ d:DateLiteral {
     }
     fStr := string(f.([]byte))
     oStr := o.(string)
+    if oStr == "<=" {
+        offset, _ := time.ParseDuration("23h59m59s")
+        date = date.Add(offset)
+    }
     return QueryData{
         Clause: fmt.Sprintf("(%s %s $$)", fStr, oStr),
         Values: []interface{}{date},
