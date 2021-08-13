@@ -111,8 +111,8 @@ func InitDb(dbpool *pgxpool.Pool, dataFile string, dryRun bool) ([]string, error
 	return commands, err
 }
 
-func GetTransactionsBetweenDates(
-	dbpool *pgxpool.Pool, start time.Time, end time.Time, limit int,
+func GetTransactionsWithFilters(
+	dbpool *pgxpool.Pool, whereClause string, values []interface{}, limit int,
 ) ([]Transaction_, error) {
 	var (
 		transactions []Transaction_
@@ -120,15 +120,13 @@ func GetTransactionsBetweenDates(
 	)
 	rows, err := dbpool.Query(
 		context.Background(),
-		`select t.id, type, date, category, sub_category, account_id, amount, notes, association_id, a.name
+		fmt.Sprintf(`select t.id, type, date, category, sub_category, account_id, amount, notes, association_id, a.name
 from transactions t
 inner join accounts a on t.account_id = a.id
-where date >= $1 and date < $2
+where %s
 order by date desc
-limit $3`,
-		start,
-		end,
-		limit,
+limit %d`, whereClause, limit),
+		values...,
 	)
 	if err != nil {
 		return nil, err
@@ -136,15 +134,8 @@ limit $3`,
 	defer rows.Close()
 	for rows.Next() {
 		if err := rows.Scan(
-			&curr.Id,
-			&curr.Type,
-			&curr.Date,
-			&curr.Category,
-			&curr.SubCategory,
-			&curr.AccountId,
-			&curr.Amount,
-			&curr.Notes,
-			&curr.AssociationId,
+			&curr.Id, &curr.Type, &curr.Date, &curr.Category, &curr.SubCategory,
+			&curr.AccountId, &curr.Amount, &curr.Notes, &curr.AssociationId,
 			&curr.AccountName,
 		); err != nil {
 			return transactions, err
@@ -152,6 +143,13 @@ limit $3`,
 		transactions = append(transactions, curr)
 	}
 	return transactions, nil
+}
+
+func GetTransactionsBetweenDates(
+	dbpool *pgxpool.Pool, start time.Time, end time.Time, limit int,
+) ([]Transaction_, error) {
+	return GetTransactionsWithFilters(dbpool, "(date >= $1 AND date <= $2)",
+		[]interface{}{start, end}, limit)
 }
 
 func GetAllTransactions(dbpool *pgxpool.Pool, limit int, offset int) ([]Transaction_, error) {
