@@ -411,7 +411,6 @@ func (entry *JournalEntry) interactivePaycheckTaxes(
 	if taxesCategoryInd >= 0 {
 		trans.Category = categoryMap[taxesCategoryInd].Category
 	}
-	fmt.Println(trans)
 	err = interactiveTransactionWithPresets(accountNames, categoryMap, &trans, nil, true, nil)
 	entry.Transactions = append(entry.Transactions, trans)
 	if err != nil {
@@ -432,7 +431,6 @@ func (entry *JournalEntry) interactivePaycheckMedicalInsurance(
 	}
 	trans.Category = "Medical Exp"
 	trans.SubCategory = "Health Insurance"
-	fmt.Println(trans)
 	err = interactiveTransactionWithPresets(accountNames, categoryMap, &trans, nil, true, nil)
 	entry.Transactions = append(entry.Transactions, trans)
 	if err != nil {
@@ -463,7 +461,6 @@ func (entry *JournalEntry) interactivePaycheckOtherExp(
 	}
 	trans.Category = "Other Exp"
 	trans.SubCategory = "Misc Exp"
-	fmt.Println(trans)
 	err = interactiveTransactionWithPresets(accountNames, categoryMap, &trans, nil, true, nil)
 	entry.Transactions = append(entry.Transactions, trans)
 	return
@@ -546,7 +543,6 @@ func (entry *JournalEntry) InteractivePaycheck(
 	}
 	colorHeading.Println("Now, let's put our money to where they belong...")
 	// Transfers
-	fmt.Println(ansBasic)
 	ac := accounting.Accounting{Symbol: "$", Precision: 2}
 	for {
 		balance := entry.balanceOnAccount(ansBasic.AccountName)
