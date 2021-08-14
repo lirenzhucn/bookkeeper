@@ -237,6 +237,13 @@ func (entry *JournalEntry) interactiveJournalEntryBasic(
 	}
 	interactiveTransactionWithPresets(accountNames, categoryMap, &trans,
 		messages, false, accountBalanceCallback)
+	// back fill answers
+	answers.Date = trans.Date
+	answers.Type = trans.Type
+	answers.AccountName = trans.AccountName
+	answers.Category = trans.Category
+	answers.SubCategory = trans.SubCategory
+	answers.Amount = trans.Amount
 	trans.Notes = answers.Title + ";" + answers.Desc + ";" + trans.Notes
 	entry.Transactions = append(entry.Transactions, trans)
 	return
@@ -264,10 +271,10 @@ func interactiveTransactionWithPresets(
 		mergedMessages[k] = v
 	}
 	dateStr := getTodayNoTimeZone().Format(BKPCTL_DATE_FORMAT)
-	if !reflect.ValueOf(trans.Date).IsZero() {
-		dateStr = trans.Date.Format(BKPCTL_DATE_FORMAT)
-	}
 	if !skipIfPreset || reflect.ValueOf(trans.Date).IsZero() {
+		if !reflect.ValueOf(trans.Date).IsZero() {
+			dateStr = trans.Date.Format(BKPCTL_DATE_FORMAT)
+		}
 		if err = survey.AskOne(&survey.Input{
 			Message: mergedMessages["Date"],
 			Default: dateStr,
@@ -282,10 +289,10 @@ func interactiveTransactionWithPresets(
 			return
 		}
 	}
-	if reflect.ValueOf(trans.Type).IsZero() {
-		trans.Type = bookkeeper.VALID_TRANSACTION_TYPES[0]
-	}
 	if !skipIfPreset || reflect.ValueOf(trans.Type).IsZero() {
+		if reflect.ValueOf(trans.Type).IsZero() {
+			trans.Type = bookkeeper.VALID_TRANSACTION_TYPES[0]
+		}
 		if err = survey.AskOne(&survey.Select{
 			Message: mergedMessages["Type"],
 			Options: bookkeeper.VALID_TRANSACTION_TYPES,
@@ -294,10 +301,10 @@ func interactiveTransactionWithPresets(
 			return
 		}
 	}
-	if reflect.ValueOf(trans.AccountName).IsZero() {
-		trans.AccountName = accountNames[0]
-	}
 	if !skipIfPreset || reflect.ValueOf(trans.AccountName).IsZero() {
+		if reflect.ValueOf(trans.AccountName).IsZero() {
+			trans.AccountName = accountNames[0]
+		}
 		if err = survey.AskOne(&survey.Select{
 			Message: mergedMessages["AccountName"],
 			Options: accountNames,
@@ -306,10 +313,10 @@ func interactiveTransactionWithPresets(
 			return
 		}
 	}
-	if reflect.ValueOf(trans.Category).IsZero() {
-		trans.Category = categoryMap.GetAllCategories()[0]
-	}
 	if !skipIfPreset || reflect.ValueOf(trans.Category).IsZero() {
+		if reflect.ValueOf(trans.Category).IsZero() {
+			trans.Category = categoryMap.GetAllCategories()[0]
+		}
 		if err = survey.AskOne(&survey.Select{
 			Message: mergedMessages["Category"],
 			Options: categoryMap.GetAllCategories(),
@@ -327,10 +334,10 @@ func interactiveTransactionWithPresets(
 			}
 		}
 	}
-	if reflect.ValueOf(trans.SubCategory).IsZero() {
-		trans.SubCategory = subCategories[0]
-	}
 	if !skipIfPreset || reflect.ValueOf(trans.SubCategory).IsZero() {
+		if reflect.ValueOf(trans.SubCategory).IsZero() {
+			trans.SubCategory = subCategories[0]
+		}
 		if err = survey.AskOne(&survey.Select{
 			Message: mergedMessages["SubCategory"],
 			Options: subCategories,
@@ -404,6 +411,7 @@ func (entry *JournalEntry) interactivePaycheckTaxes(
 	if taxesCategoryInd >= 0 {
 		trans.Category = categoryMap[taxesCategoryInd].Category
 	}
+	fmt.Println(trans)
 	err = interactiveTransactionWithPresets(accountNames, categoryMap, &trans, nil, true, nil)
 	entry.Transactions = append(entry.Transactions, trans)
 	if err != nil {
@@ -424,6 +432,7 @@ func (entry *JournalEntry) interactivePaycheckMedicalInsurance(
 	}
 	trans.Category = "Medical Exp"
 	trans.SubCategory = "Health Insurance"
+	fmt.Println(trans)
 	err = interactiveTransactionWithPresets(accountNames, categoryMap, &trans, nil, true, nil)
 	entry.Transactions = append(entry.Transactions, trans)
 	if err != nil {
@@ -454,6 +463,7 @@ func (entry *JournalEntry) interactivePaycheckOtherExp(
 	}
 	trans.Category = "Other Exp"
 	trans.SubCategory = "Misc Exp"
+	fmt.Println(trans)
 	err = interactiveTransactionWithPresets(accountNames, categoryMap, &trans, nil, true, nil)
 	entry.Transactions = append(entry.Transactions, trans)
 	return
@@ -536,6 +546,7 @@ func (entry *JournalEntry) InteractivePaycheck(
 	}
 	colorHeading.Println("Now, let's put our money to where they belong...")
 	// Transfers
+	fmt.Println(ansBasic)
 	ac := accounting.Accounting{Symbol: "$", Precision: 2}
 	for {
 		balance := entry.balanceOnAccount(ansBasic.AccountName)
