@@ -98,7 +98,7 @@ Condition <- f:"date" _ o:Op _ d:DateLiteral {
     }, nil
 } / f:"type" _ o:"=" _ v:StringLiteral {
     return parseEqLikeString(f, o, v)
-} / f:("category" / "sub_category" / "account_name" / "notes") _ o:("=" / "~") _ v:StringLiteral {
+} / f:("category" / "sub_category" / "a.name" / "notes") _ o:("=" / "~") _ v:StringLiteral {
     return parseEqLikeString(f, o, v)
 } / f:"amount" _ o:Op _ v:Integer {
     fStr := string(f.([]byte))

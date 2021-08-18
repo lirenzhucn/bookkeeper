@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
-	"regexp"
 	"strings"
 	"time"
 
@@ -26,63 +26,54 @@ var transLsCmd = &cobra.Command{
 	Run:   lsTransactions,
 }
 
+func parseQueryString(original string) (parsed string, err error) {
+	switch strings.ToLower(original) {
+	case "last week":
+		today := time.Now()
+		cutoff := today.Add(-time.Hour * 24 * 7)
+		parsed = fmt.Sprintf(
+			"date>=%s AND date<=%s", cutoff.Format("2006/01/02"),
+			today.Format("2006/01/02"),
+		)
+		return
+	case "last 30 days":
+		today := time.Now()
+		cutoff := today.Add(-time.Hour * 24 * 30)
+		parsed = fmt.Sprintf(
+			"date>=%s AND date<=%s", cutoff.Format("2006/01/02"),
+			today.Format("2006/01/02"),
+		)
+		return
+	}
+	parsed = original
+	return
+}
+
 func initTransCmd(rootCmd *cobra.Command) {
-	transLsCmd.Flags().StringP("start", "s", "", "Start date of the query YYYY/MM/DD")
-	transLsCmd.Flags().StringP("end", "e", "", "End date of the query YYYY/MM/DD")
+	transLsCmd.Flags().StringP("query", "q", "", "Query string for transactions")
 	transCmd.AddCommand(transLsCmd)
 	rootCmd.AddCommand(transCmd)
 }
 
-var dateRegex = regexp.MustCompile("[0-9]{4}/[0-9]{2}/[0-9]{2}")
-
-func validateDateStr(dateStr string) bool {
-	return dateRegex.Match([]byte(dateStr))
-}
-
 func lsTransactions(cmd *cobra.Command, args []string) {
 	var (
-		err        error
-		queryTerms []string
-		url        string
+		err      error
+		queryStr string
+		url_     string
 	)
 
-	startDateStr, errStart := cmd.Flags().GetString("start")
-	endDateStr, errEnd := cmd.Flags().GetString("end")
-	if errEnd == nil && endDateStr != "" {
-		if validateDateStr(endDateStr) {
-			queryTerms = append(queryTerms, fmt.Sprintf("endDate=%s", endDateStr))
-		} else {
-			fmt.Println("End specified but is invalid. Will ignore.")
-			endDateStr = ""
-		}
+	queryStr, err = cmd.Flags().GetString("query")
+	cobra.CheckErr(err)
+	if queryStr == "" {
+		queryStr = "last week"
 	}
-	if errStart == nil && startDateStr != "" {
-		if validateDateStr(startDateStr) {
-			queryTerms = append(queryTerms, fmt.Sprintf("startDate=%s", startDateStr))
-		} else {
-			fmt.Println("Start specified but is invalid. Will ignore.")
-			startDateStr = ""
-		}
-	}
-	switch {
-	case startDateStr == "" && endDateStr != "":
-		fmt.Println("Only end is specified! Will discard.")
-		queryTerms = nil
-	case startDateStr != "" && endDateStr == "":
-		fmt.Println("Only start is specified! Will use today as the end!")
-		queryTerms = append(
-			queryTerms,
-			fmt.Sprintf("endDate=%s", time.Now().Format("2006/01/02")),
-		)
-	}
-
-	url = BASE_URL + "transactions"
-	if len(queryTerms) > 0 {
-		url += "?" + strings.Join(queryTerms, "&")
-	}
+	queryStr, err = parseQueryString(queryStr)
+	cobra.CheckErr(err)
+	url_ = fmt.Sprintf("%stransactions?queryString=%s", BASE_URL,
+		url.QueryEscape(queryStr))
 
 	var transactions []bookkeeper.Transaction_
-	resp, err := http.Get(url)
+	resp, err := http.Get(url_)
 	cobra.CheckErr(err)
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
