@@ -65,6 +65,10 @@ func HandleRequests(port string, db_url string) {
 	// transactions
 	myRouter.Path("/transactions").
 		Methods("GET").
+		Queries("queryString", "{queryString}").
+		HandlerFunc(queryTransactions)
+	myRouter.Path("/transactions").
+		Methods("GET").
 		Queries("startDate", "{startDate}", "endDate", "{endDate}").
 		HandlerFunc(returnTransactionsBetweenDates)
 	myRouter.Path("/transactions").

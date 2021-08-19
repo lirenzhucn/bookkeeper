@@ -1,0 +1,142 @@
+{
+package _peg
+
+type QueryData struct {
+    Clause string
+    Values []interface{}
+}
+
+func toIfaceSlice(v interface{}) []interface{} {
+    if v == nil {
+        return nil
+    }
+    return v.([]interface{})
+}
+
+func eval(first, rest interface{}) QueryData {
+    l := first.(QueryData)
+    restSl := toIfaceSlice(rest)
+    for _, v := range restSl {
+        restExpr := toIfaceSlice(v)
+        r := restExpr[3].(QueryData)
+        op := restExpr[1].(string)
+        l.Clause = fmt.Sprintf("(%s %s %s)", l.Clause, op, r.Clause)
+        l.Values = append(l.Values, r.Values...)
+    }
+    return l
+}
+
+func parseEqLikeString(f interface{}, o interface{}, v interface{}) (qd QueryData, err error) {
+    oo := string(o.([]byte))
+    switch oo {
+        case "=":
+            qd.Clause = fmt.Sprintf("(%s = $$)", string(f.([]byte)))
+            qd.Values = []interface{}{v.(string)}
+        case "~":
+            qd.Clause = fmt.Sprintf("(%s LIKE $$)", f)
+            qd.Values = []interface{}{fmt.Sprintf("%%%s%%", v.(string))}
+        default:
+            err = fmt.Errorf("invalid op %s", oo)
+    }
+    return qd, err
+}
+
+func ParseString(s string) (got QueryData, err error) {
+    got_, err := ParseReader("", strings.NewReader(s))
+    if err != nil {
+        return
+    }
+    got, ok := got_.(QueryData)
+    if !ok {
+        err = fmt.Errorf("parser produced invalid QueryData output: %s", got_)
+        return
+    }
+    return
+}
+}
+
+Input <- expr:Expr EOF {
+    return expr, nil
+}
+
+Expr <- _ first:Term rest:( _ LogicOrOp _ Term)* _ {
+    return eval(first, rest), nil
+}
+
+Term <- first:Factor rest:( _ LogicAndOp _ Factor)* {
+    return eval(first, rest), nil
+}
+
+LogicOrOp <- "OR"i {
+    return string(c.text), nil
+}
+
+LogicAndOp <- "AND"i {
+    return string(c.text), nil
+}
+
+Factor <- '(' expr:Expr ')' {
+    return expr, nil
+} / cond:Condition {
+    return cond, nil
+}
+
+Condition <- f:"date" _ o:Op _ d:DateLiteral {
+    date, err := time.Parse("2006/01/02", d.(string))
+    if err != nil {
+        return nil, err
+    }
+    fStr := string(f.([]byte))
+    oStr := o.(string)
+    if oStr == "<=" {
+        offset, _ := time.ParseDuration("23h59m59s")
+        date = date.Add(offset)
+    }
+    return QueryData{
+        Clause: fmt.Sprintf("(%s %s $$)", fStr, oStr),
+        Values: []interface{}{date},
+    }, nil
+} / f:"type" _ o:"=" _ v:StringLiteral {
+    return parseEqLikeString(f, o, v)
+} / f:("category" / "sub_category" / "a.name" / "notes") _ o:("=" / "~") _ v:StringLiteral {
+    return parseEqLikeString(f, o, v)
+} / f:"amount" _ o:Op _ v:Integer {
+    fStr := string(f.([]byte))
+    oStr := o.(string)
+    vInt := v.(int64)
+    return QueryData{
+        Clause: fmt.Sprintf("(%s %s $$)", fStr, oStr),
+        Values: []interface{}{vInt},
+    }, nil
+}
+
+DateLiteral <- [0-9][0-9][0-9][0-9] '/' [0-9][0-9] '/' [0-9][0-9] {
+    return string(c.text), nil
+}
+
+StringLiteral <- '"' ( !EscapedChar . / '\\' EscapeSequence )* '"' {
+    c.text = bytes.Replace(c.text, []byte(`\/`), []byte(`/`), -1)
+    return strconv.Unquote(string(c.text))
+}
+
+EscapedChar <- [\x00-\x1f"\\]
+
+EscapeSequence <- SingleCharEscape / UnicodeEscape
+
+SingleCharEscape <- ["\\/bfnrt]
+
+UnicodeEscape <- 'u' HexDigit HexDigit HexDigit HexDigit
+
+HexDigit <- [0-9a-f]i
+
+Integer <- '-'? [0-9]+ {
+    return strconv.ParseInt(string(c.text), 10, 64)
+}
+
+Op <- ("<=" / ">=" / '=' / '<' / '>') {
+    return string(c.text), nil
+}
+
+_ "whitespace" <- [ \n\t\r]*
+
+EOF <- !.

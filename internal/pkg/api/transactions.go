@@ -10,9 +10,45 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/lirenzhucn/bookkeeper/internal/pkg/api/_peg"
 	"github.com/lirenzhucn/bookkeeper/internal/pkg/bookkeeper"
 	"go.uber.org/zap"
 )
+
+func prepQueryData(queryData *_peg.QueryData) {
+	for i := range queryData.Values {
+		queryData.Clause = strings.Replace(queryData.Clause, "$$",
+			fmt.Sprintf("$%d", i+1), 1)
+	}
+}
+
+func queryTransactions(w http.ResponseWriter, r *http.Request) {
+	sugar := zap.L().Sugar()
+	defer sugar.Sync()
+
+	queryString := strings.Trim(r.FormValue("queryString"), "'")
+	sugar.Infow("got a query string", "queryString", queryString)
+	queryData, err := _peg.ParseString(queryString)
+	if !checkErr(err, w, 400, "Invalid query string", "error", err) {
+		return
+	}
+	prepQueryData(&queryData)
+	transactions, err := bookkeeper.GetTransactionsWithFilters(
+		dbpool, queryData.Clause, queryData.Values, MAX_NUM_RECORDS)
+	if err != nil {
+		sugar.Errorw(
+			"failed to query transactions with filters",
+			"error", err,
+			"queryData.Clause", queryData.Clause,
+			"queryData.Values", queryData.Values,
+		)
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
+	// write the response
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(transactions)
+}
 
 func returnTransactionsBetweenDates(w http.ResponseWriter, r *http.Request) {
 	sugar := zap.L().Sugar()
