@@ -88,7 +88,7 @@ func lsTransactions(cmd *cobra.Command, args []string) {
 	queryStr, err = cmd.Flags().GetString("query")
 	cobra.CheckErr(err)
 	if queryStr == "" {
-		queryStr = "last week"
+		queryStr = "past week"
 	}
 	queryStr = parseQueryString(queryStr)
 	url_ = fmt.Sprintf("%stransactions?queryString=%s", BASE_URL,
