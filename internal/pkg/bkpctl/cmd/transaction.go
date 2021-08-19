@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -26,26 +28,47 @@ var transLsCmd = &cobra.Command{
 	Run:   lsTransactions,
 }
 
-func parseQueryString(original string) (parsed string, err error) {
-	switch strings.ToLower(original) {
-	case "last week":
+var numDaysMatcher = regexp.MustCompile(`^past\s*(\d+)\s*day(s*)$`)
+
+func parseQueryString(original string) (parsed string) {
+	phrases := strings.SplitN(original, "on", 2)
+	if len(phrases) < 2 {
+		phrases = append(phrases, "")
+	}
+	dateRange, accountName := phrases[0], phrases[1]
+	dateRange = strings.TrimSpace(dateRange)
+	accountName = strings.TrimSpace(accountName)
+	matchedGroups := numDaysMatcher.FindStringSubmatch(dateRange)
+	switch {
+	case dateRange == "past week":
 		today := time.Now()
-		cutoff := today.Add(-time.Hour * 24 * 7)
-		parsed = fmt.Sprintf(
+		cutoff := today.Add(-time.Hour * 24 * 6)
+		parsed = parsed + fmt.Sprintf(
 			"date>=%s AND date<=%s", cutoff.Format("2006/01/02"),
 			today.Format("2006/01/02"),
 		)
-		return
-	case "last 30 days":
-		today := time.Now()
-		cutoff := today.Add(-time.Hour * 24 * 30)
-		parsed = fmt.Sprintf(
+	case dateRange == "last week":
+		today := time.Now().Add(-time.Hour * 24 * 7)
+		cutoff := today.Add(-time.Hour * 24 * 6)
+		parsed = parsed + fmt.Sprintf(
 			"date>=%s AND date<=%s", cutoff.Format("2006/01/02"),
 			today.Format("2006/01/02"),
 		)
+	case matchedGroups != nil:
+		numDays, _ := strconv.ParseInt(matchedGroups[1], 10, 64)
+		today := time.Now()
+		cutoff := today.Add(-time.Hour * 24 * time.Duration(numDays-1))
+		parsed = parsed + fmt.Sprintf(
+			"date>=%s AND date<=%s", cutoff.Format("2006/01/02"),
+			today.Format("2006/01/02"),
+		)
+	default:
+		parsed = original
 		return
 	}
-	parsed = original
+	if accountName != "" {
+		parsed = parsed + fmt.Sprintf(` AND a.name="%s"`, accountName)
+	}
 	return
 }
 
@@ -67,8 +90,7 @@ func lsTransactions(cmd *cobra.Command, args []string) {
 	if queryStr == "" {
 		queryStr = "last week"
 	}
-	queryStr, err = parseQueryString(queryStr)
-	cobra.CheckErr(err)
+	queryStr = parseQueryString(queryStr)
 	url_ = fmt.Sprintf("%stransactions?queryString=%s", BASE_URL,
 		url.QueryEscape(queryStr))
 
