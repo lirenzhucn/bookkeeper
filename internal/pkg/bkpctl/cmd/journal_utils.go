@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/leekchan/accounting"
 	"github.com/lirenzhucn/bookkeeper/internal/pkg/bookkeeper"
+	"go.uber.org/zap"
 )
 
 type JournalEntry struct {
@@ -258,6 +259,9 @@ func interactiveTransactionWithPresets(
 	skipIfPreset bool,
 	accountBalanceCallback AccountBalanceCallback,
 ) (err error) {
+	sugar := zap.L().Sugar()
+	defer sugar.Sync()
+
 	mergedMessages := map[string]string{
 		"Date":        "When did the transaction happen?",
 		"Type":        "Choose a transaction type",
@@ -298,6 +302,7 @@ func interactiveTransactionWithPresets(
 			Options: bookkeeper.VALID_TRANSACTION_TYPES,
 			Default: trans.Type,
 		}, &trans.Type); err != nil {
+			sugar.Errorw("error in getting type", "error", err)
 			return
 		}
 	}
@@ -310,6 +315,7 @@ func interactiveTransactionWithPresets(
 			Options: accountNames,
 			Default: trans.AccountName,
 		}, &trans.AccountName); err != nil {
+			sugar.Errorw("error in getting account name", "error", err)
 			return
 		}
 	}
@@ -322,6 +328,7 @@ func interactiveTransactionWithPresets(
 			Options: categoryMap.GetAllCategories(),
 			Default: trans.Category,
 		}, &trans.Category); err != nil {
+			sugar.Errorw("error in getting category", "error", err)
 			return
 		}
 	}
@@ -343,6 +350,7 @@ func interactiveTransactionWithPresets(
 			Options: subCategories,
 			Default: trans.SubCategory,
 		}, &trans.SubCategory); err != nil {
+			sugar.Errorw("error in getting sub-category", "error", err)
 			return
 		}
 	}
@@ -352,6 +360,7 @@ func interactiveTransactionWithPresets(
 		balance, err = accountBalanceCallback(trans.AccountName,
 			trans.Date.Format(BKPCTL_DATE_FORMAT))
 		if err != nil {
+			sugar.Errorw("error in getting account balance", "error", err, "account", trans.AccountName)
 			return
 		}
 		ac := accounting.Accounting{Symbol: "$", Precision: 2}
@@ -369,6 +378,7 @@ func interactiveTransactionWithPresets(
 			_, err := strconv.ParseFloat(str, 64)
 			return err
 		})); err != nil {
+		sugar.Errorw("error in getting amount", "error", err)
 		return
 	}
 	val, err := strconv.ParseFloat(amountStr, 64)
