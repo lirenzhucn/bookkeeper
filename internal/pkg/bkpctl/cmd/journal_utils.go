@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"strconv"
 	"strings"
@@ -159,7 +160,7 @@ func (entry *JournalEntry) interactiveTransferEntryBasic(
 		Transform: func(ans interface{}) (newAns interface{}) {
 			str, _ := ans.(string)
 			val, _ := strconv.ParseFloat(str, 64)
-			newAns = int64(val * 100)
+			newAns = int64(math.Round(val * 100))
 			return
 		},
 	})
@@ -385,7 +386,7 @@ func interactiveTransactionWithPresets(
 	if err != nil {
 		return
 	}
-	trans.Amount = int64(val*100) - balance
+	trans.Amount = int64(math.Round(val*100)) - balance
 	if !skipIfPreset || reflect.ValueOf(trans.Notes).IsZero() {
 		if err = survey.AskOne(&survey.Input{
 			Message: mergedMessages["Notes"],
