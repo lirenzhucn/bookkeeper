@@ -52,6 +52,27 @@ func postAccounts(accountMap *map[string]bookkeeper.Account) error {
 	return nil
 }
 
+func getAllAccounts(accounts *[]bookkeeper.Account) error {
+	url_ := BASE_URL + "accounts"
+	resp, err := http.Get(url_)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("failed to get accounts; response status: %s", resp.Status)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(body, accounts)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func postSingleTransaction(trans bookkeeper.Transaction) (bookkeeper.Transaction, error) {
 	var newTrans bookkeeper.Transaction
 	url_ := BASE_URL + "transactions"

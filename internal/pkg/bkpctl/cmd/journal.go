@@ -3,8 +3,6 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 
 	"github.com/lirenzhucn/bookkeeper/internal/pkg/bookkeeper"
@@ -72,27 +70,6 @@ func readCategoryMap(categoriesFile string, categoryMap *CategoryMap) error {
 	return nil
 }
 
-func getAllAcounts(accounts *[]bookkeeper.Account) error {
-	url_ := BASE_URL + "accounts"
-	resp, err := http.Get(url_)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("failed to get accounts; response status: %s", resp.Status)
-	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-	err = json.Unmarshal(body, accounts)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func recordActivity(cmd *cobra.Command, args []string) {
 	// read category map
 	categoriesFile, err := cmd.Flags().GetString("categories")
@@ -101,7 +78,7 @@ func recordActivity(cmd *cobra.Command, args []string) {
 	readCategoryMap(categoriesFile, &categoryMap)
 	// get all accounts
 	var accounts []bookkeeper.Account
-	getAllAcounts(&accounts)
+	getAllAccounts(&accounts)
 	var entry JournalEntry
 	switch journalTypeFlag {
 	case SingleExpenseIncomeJournal:
