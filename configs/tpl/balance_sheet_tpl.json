@@ -1,0 +1,87 @@
+{
+    "mapping": {
+        "Cash or Equivalent": [
+            "Assets/cash"
+        ],
+        "Taxable Securities": [
+            "Assets/taxable+liquid"
+        ],
+        "Liquid Assets": [
+            "Assets/cash",
+            "Assets/taxable+liquid"
+        ],
+        "Retirement Savings": [
+            "Assets/retirement"
+        ],
+        "Education Savings": [
+            "Assets/education"
+        ],
+        "Other Nonliquid": [
+            "Assets/nonliquid"
+        ],
+        "Assets excl. Home": [
+            "Assets/cash",
+            "Assets/taxable+liquid",
+            "Assets/retirement",
+            "Assets/education",
+            "Assets/nonliquid"
+        ],
+        "Home Net Mortgage": [
+            "Assets/real estate"
+        ],
+        "Total Assets": [
+            "Assets/TOTAL"
+        ],
+        "Short Term Liabilities": [
+            "Liabilities/credit card"
+        ],
+        "Long Term Liabilities": [
+            "Liabilities/loan"
+        ],
+        "Total Liabilities": [
+            "Liabilities/TOTAL"
+        ],
+        "Stockholders Equities": [
+            "Equities/TOTAL"
+        ]
+    },
+    "order": [
+        "Cash or Equivalent",
+        "Taxable Securities",
+        "Liquid Assets",
+        "-",
+        "Retirement Savings",
+        "Education Savings",
+        "Other Nonliquid",
+        "Assets excl. Home",
+        "-",
+        "Home Net Mortgage",
+        "Total Assets",
+        "-",
+        "Short Term Liabilities",
+        "Long Term Liabilities",
+        "Total Liabilities",
+        "-",
+        "Stockholders Equities"
+    ],
+    "formatters": {
+        "Liquid Assets": [
+            "bold"
+        ],
+        "Assets excl. Home": [
+            "bold"
+        ],
+        "Total Assets": [
+            "bold",
+            "green"
+        ],
+        "Total Liabilities": [
+            "bold",
+            "red"
+        ],
+        "Stockholders Equities": [
+            "bold",
+            "yellow"
+        ]
+    }
+}

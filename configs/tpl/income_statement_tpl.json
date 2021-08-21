@@ -1,0 +1,144 @@
+{
+    "mapping": {
+        "Salaries": [
+            "Revenue/Professional Income/Salary"
+        ],
+        "RSU": [
+            "Revenue/Professional Income/RSU"
+        ],
+        "Employer Match": [
+            "Revenue/Professional Income/Employer Match"
+        ],
+        "Other Revenue": [
+            "Revenue/Other Income/"
+        ],
+        "Total Revenue": [
+            "Revenue/TOTAL"
+        ],
+        "Tax Expenses": [
+            "Taxes/TOTAL"
+        ],
+        "Revenue Net Taxes": [
+            "RevenueNetTaxes/TOTAL"
+        ],
+        "Mortgage Interests": [
+            "Expenses/Home/Mortgage Interest"
+        ],
+        "Loan Fees": [
+            "Expenses/Home/Loan Fees"
+        ],
+        "HOA": [
+            "Expenses/Home/HOA"
+        ],
+        "Food & Dining": [
+            "Expenses/Food & Dining/"
+        ],
+        "Kids": [
+            "Expenses/Kids/"
+        ],
+        "Bills & Utilities": [
+            "Expenses/Bills & Utilities/"
+        ],
+        "Transportation": [
+            "Expenses/Transportation/"
+        ],
+        "Entertainment": [
+            "Expenses/Entertainment/"
+        ],
+        "Shopping": [
+            "Expenses/Shopping/"
+        ],
+        "Communications": [
+            "Expenses/Communications/"
+        ],
+        "Medical Exp": [
+            "Expenses/Medical Exp/"
+        ],
+        "Other Exp": [
+            "Expenses/Other Exp/"
+        ],
+        "Total Expenses": [
+            "Expenses/TOTAL"
+        ],
+        "Operating Income": [
+            "OperatingIncome/TOTAL"
+        ],
+        "Taxable Investments": [
+            "Investments/Investment/Taxable Investment"
+        ],
+        "Retirement Investments": [
+            "Investments/Investment/Retirement Investment"
+        ],
+        "Education Investments": [
+            "Investments/Investment/Education Investment"
+        ],
+        "Invest Gains/Losses": [
+            "Investments/TOTAL"
+        ],
+        "Total Earnings": [
+            "TotalEarnings/TOTAL"
+        ]
+    },
+    "order": [
+        "Salaries",
+        "RSU",
+        "Employer Match",
+        "Other Revenue",
+        "Total Revenue",
+        "-",
+        "Tax Expenses",
+        "Revenue Net Taxes",
+        "-",
+        "Mortgage Interests",
+        "Loan Fees",
+        "HOA",
+        "Food & Dining",
+        "Kids",
+        "Bills & Utilities",
+        "Transportation",
+        "Entertainment",
+        "Shopping",
+        "Communications",
+        "Medical Exp",
+        "Other Exp",
+        "Total Expenses",
+        "-",
+        "Operating Income",
+        "-",
+        "Taxable Investments",
+        "Retirement Investments",
+        "Education Investments",
+        "Invest Gains/Losses",
+        "-",
+        "Total Earnings"
+    ],
+    "formatters": {
+        "Total Revenue": [
+            "bold",
+            "green"
+        ],
+        "Revenue Net Taxes": [
+            "bold",
+            "yellow"
+        ],
+        "Total Expenses": [
+            "bold",
+            "red"
+        ],
+        "Operating Income": [
+            "bold",
+            "green",
+            "underline"
+        ],
+        "Invest Gains/Losses": [
+            "bold",
+            "green",
+            "underline"
+        ],
+        "Total Earnings": [
+            "bold",
+            "yellow",
+            "underline"
+        ]
+    }
+}
