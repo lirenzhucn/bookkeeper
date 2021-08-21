@@ -192,7 +192,7 @@ func initReportCmd(rootCmd *cobra.Command) {
 	"Total Earnings"
 ],
 "formatters": {
-	"Total Revenue": ["bold", "red"],
+	"Total Revenue": ["bold", "green"],
 	"Revenue Net Taxes": ["bold", "yellow"],
 	"Total Expenses": ["bold", "red"],
 	"Operating Income": ["bold", "green", "underline"],
