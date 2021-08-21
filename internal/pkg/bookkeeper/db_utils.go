@@ -222,7 +222,7 @@ func GetSingleTransaction(dbpool *pgxpool.Pool, id int) (Transaction_, error) {
 	row := dbpool.QueryRow(
 		context.Background(),
 		`select t.id, type, date, category, sub_category, account_id, amount, notes, association_id, a.name
-from transaction t
+from transactions t
 inner join accounts a on t.account_id = a.id
 where t.id = $1`,
 		id,
