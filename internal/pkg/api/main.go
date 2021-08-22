@@ -49,10 +49,14 @@ func HandleRequests(port string, db_url string) {
 	// accounts
 	myRouter.Path("/accounts").
 		Methods("GET").
-		HandlerFunc(returnAllAccounts)
+		Queries("accountName", "{accountName}").
+		HandlerFunc(returnAccountByName)
 	myRouter.Path("/accounts/{id}").
 		Methods("GET").
 		HandlerFunc(returnSingleAccount)
+	myRouter.Path("/accounts").
+		Methods("GET").
+		HandlerFunc(returnAllAccounts)
 	myRouter.Path("/accounts").
 		Methods("POST").
 		HandlerFunc(postAccount)

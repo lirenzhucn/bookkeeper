@@ -7,10 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"regexp"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/lirenzhucn/bookkeeper/internal/pkg/bookkeeper"
 	"github.com/olekukonko/tablewriter"
@@ -27,14 +24,32 @@ var transLsCmd = &cobra.Command{
 	Long:  "List either all transactions or those between two dates",
 	Run:   lsTransactions,
 }
-
 var transUpdateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Update a transaction",
 	Run:   updateTransactions,
 }
-
-var numDaysMatcher = regexp.MustCompile(`^past\s*(\d+)\s*day(s*)$`)
+var transReconCmd = &cobra.Command{
+	Use:   "recon",
+	Short: "Reconcile one account",
+	Run: func(cmd *cobra.Command, args []string) {
+		dateRange_, err := cmd.Flags().GetString("date-range")
+		cobra.CheckErr(err)
+		if dateRange_ == "" {
+			dateRange_ = "past week"
+		}
+		dateRange, ok := parseDateRange(dateRange_)
+		if !ok {
+			cobra.CheckErr(fmt.Errorf("invalid date range %s", dateRange_))
+		}
+		accountName, err := cmd.Flags().GetString("account")
+		cobra.CheckErr(err)
+		account, err := getAccountByName(accountName)
+		cobra.CheckErr(err)
+		fmt.Println(dateRange)
+		fmt.Println(account)
+	},
+}
 
 func parseQueryString(original string) (parsed string) {
 	phrases := strings.SplitN(original, "on", 2)
@@ -44,33 +59,9 @@ func parseQueryString(original string) (parsed string) {
 	dateRange, accountName := phrases[0], phrases[1]
 	dateRange = strings.TrimSpace(dateRange)
 	accountName = strings.TrimSpace(accountName)
-	matchedGroups := numDaysMatcher.FindStringSubmatch(dateRange)
-	switch {
-	case dateRange == "past week":
-		today := time.Now()
-		cutoff := today.Add(-time.Hour * 24 * 6)
-		parsed = parsed + fmt.Sprintf(
-			"date>=%s AND date<=%s", cutoff.Format("2006/01/02"),
-			today.Format("2006/01/02"),
-		)
-	case dateRange == "last week":
-		today := time.Now().Add(-time.Hour * 24 * 7)
-		cutoff := today.Add(-time.Hour * 24 * 6)
-		parsed = parsed + fmt.Sprintf(
-			"date>=%s AND date<=%s", cutoff.Format("2006/01/02"),
-			today.Format("2006/01/02"),
-		)
-	case matchedGroups != nil:
-		numDays, _ := strconv.ParseInt(matchedGroups[1], 10, 64)
-		today := time.Now()
-		cutoff := today.Add(-time.Hour * 24 * time.Duration(numDays-1))
-		parsed = parsed + fmt.Sprintf(
-			"date>=%s AND date<=%s", cutoff.Format("2006/01/02"),
-			today.Format("2006/01/02"),
-		)
-	default:
-		parsed = original
-		return
+	parsedDateRange, ok := dateRangeToQuery(dateRange)
+	if ok {
+		parsed = parsed + parsedDateRange
 	}
 	if accountName != "" {
 		parsed = parsed + fmt.Sprintf(` AND a.name="%s"`, accountName)
@@ -84,8 +75,18 @@ func initTransCmd(rootCmd *cobra.Command) {
 		"categories", "c", "",
 		"Path to the Category definition file (default: ./configs/category_map.json)",
 	)
+	transReconCmd.Flags().StringP(
+		"account", "a", "",
+		"The name of the account to reconcile",
+	)
+	transReconCmd.Flags().StringP(
+		"date-range", "d", "",
+		"The date range to reconcile (default: past week)",
+	)
+	transReconCmd.MarkFlagRequired("account")
 	transCmd.AddCommand(transLsCmd)
 	transCmd.AddCommand(transUpdateCmd)
+	transCmd.AddCommand(transReconCmd)
 	rootCmd.AddCommand(transCmd)
 }
 
