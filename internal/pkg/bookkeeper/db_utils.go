@@ -222,7 +222,7 @@ func GetSingleTransaction(dbpool *pgxpool.Pool, id int) (Transaction_, error) {
 	row := dbpool.QueryRow(
 		context.Background(),
 		`select t.id, type, date, category, sub_category, account_id, amount, notes, association_id, a.name
-from transaction t
+from transactions t
 inner join accounts a on t.account_id = a.id
 where t.id = $1`,
 		id,
@@ -283,6 +283,25 @@ returning id, type, date, category, sub_category, account_id, amount, notes, ass
 		&trans.AssociationId,
 	)
 	return err
+}
+
+func UpdateTransaction(dbpool *pgxpool.Pool, trans *Transaction) (err error) {
+	row := dbpool.QueryRow(
+		context.Background(),
+		`update transactions
+set type=$1, date=$2, category=$3, sub_category=$4, account_id=$5, amount=$6,
+notes=$7, association_id=$8 where id=$9
+returning id, type, date, category, sub_category, account_id, amount, notes, association_id`,
+		trans.Type, trans.Date, trans.Category, trans.SubCategory,
+		trans.AccountId, trans.Amount, trans.Notes, trans.AssociationId,
+		trans.Id,
+	)
+	err = row.Scan(
+		&trans.Id, &trans.Type, &trans.Date, &trans.Category,
+		&trans.SubCategory, &trans.AccountId, &trans.Amount, &trans.Notes,
+		&trans.AssociationId,
+	)
+	return
 }
 
 func DeleteTransaction(dbpool *pgxpool.Pool, trans_id int) error {

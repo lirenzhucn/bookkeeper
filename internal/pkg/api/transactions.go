@@ -123,11 +123,15 @@ func postTransaction(w http.ResponseWriter, r *http.Request) {
 }
 
 func patchTransaction(w http.ResponseWriter, r *http.Request) {
+	sugar := zap.L().Sugar()
+	defer sugar.Sync()
+
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if !checkErr(err, w, 400, "Invalid transaction id provided") {
 		return
 	}
+	sugar.Infow("received valid PATCH request", "id", id)
 	postOrPatchTransaction(w, r, id)
 }
 
@@ -151,16 +155,14 @@ func postOrPatchTransaction(w http.ResponseWriter, r *http.Request, transId int)
 	}
 
 	if transId < 0 {
-		err := bookkeeper.InsertTransaction(dbpool, &trans)
-		if !checkErr(err, w, 500, "Failed to insert account") {
-			return
-		}
-		json.NewEncoder(w).Encode(trans)
+		err = bookkeeper.InsertTransaction(dbpool, &trans)
 	} else {
-		// err := bookkeeper.UpdateTransaction(dbpool, &trans)
-		http.Error(w, "PATCH not implemented", 404)
+		err = bookkeeper.UpdateTransaction(dbpool, &trans)
+	}
+	if !checkErr(err, w, 500, "Failed to insert or update transaction") {
 		return
 	}
+	json.NewEncoder(w).Encode(trans)
 }
 
 func deleteTransaction(w http.ResponseWriter, r *http.Request) {

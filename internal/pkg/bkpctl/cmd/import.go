@@ -2,12 +2,10 @@ package cmd
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"regexp"
 	"strconv"
@@ -84,27 +82,6 @@ func readConfig(configPath string, sourceType string) (ImportConfig, error) {
 	return importConfig, err
 }
 
-func postAccounts(accountMap *map[string]bookkeeper.Account) error {
-	var newAccount bookkeeper.Account
-	url := BASE_URL + "accounts"
-	for key, account := range *accountMap {
-		buffer := new(bytes.Buffer)
-		json.NewEncoder(buffer).Encode(account)
-		resp, err := http.Post(url, "application/json", buffer)
-		if err != nil {
-			return err
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode != 200 {
-			return fmt.Errorf(
-				"failed to insert account with name %s", account.Name)
-		}
-		json.NewDecoder(resp.Body).Decode(&newAccount)
-		(*accountMap)[key] = newAccount
-	}
-	return nil
-}
-
 func readAndPostTransactions(dataPath string, config ImportConfig) error {
 	dataFile, err := os.Open(dataPath)
 	if err != nil {
@@ -152,23 +129,6 @@ func readAndPostTransactions(dataPath string, config ImportConfig) error {
 	}
 
 	return nil
-}
-
-func postSingleTransaction(trans bookkeeper.Transaction) (bookkeeper.Transaction, error) {
-	var newTrans bookkeeper.Transaction
-	url := BASE_URL + "transactions"
-	buffer := new(bytes.Buffer)
-	json.NewEncoder(buffer).Encode(trans)
-	resp, err := http.Post(url, "application/json", buffer)
-	if err != nil {
-		return trans, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		return trans, fmt.Errorf("failed to insert transaction")
-	}
-	json.NewDecoder(resp.Body).Decode(&newTrans)
-	return newTrans, nil
 }
 
 var rAmount = regexp.MustCompile(`^[+/-]?[0-9]+\.[0-9]{2}`)
