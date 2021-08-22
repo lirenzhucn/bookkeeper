@@ -28,6 +28,12 @@ var transLsCmd = &cobra.Command{
 	Run:   lsTransactions,
 }
 
+var transUpdateCmd = &cobra.Command{
+	Use:   "update",
+	Short: "Update a transaction",
+	Run:   updateTransactions,
+}
+
 var numDaysMatcher = regexp.MustCompile(`^past\s*(\d+)\s*day(s*)$`)
 
 func parseQueryString(original string) (parsed string) {
@@ -74,7 +80,12 @@ func parseQueryString(original string) (parsed string) {
 
 func initTransCmd(rootCmd *cobra.Command) {
 	transLsCmd.Flags().StringP("query", "q", "", "Query string for transactions")
+	transUpdateCmd.Flags().StringP(
+		"categories", "c", "",
+		"Path to the Category definition file (default: ./configs/category_map.json)",
+	)
 	transCmd.AddCommand(transLsCmd)
+	transCmd.AddCommand(transUpdateCmd)
 	rootCmd.AddCommand(transCmd)
 }
 
@@ -121,4 +132,26 @@ func tablePrintTransactions(transactions []bookkeeper.Transaction_) {
 		table.Append(row)
 	}
 	table.Render()
+}
+
+func updateTransactions(cmd *cobra.Command, args []string) {
+	// read category map
+	categoriesFile, err := cmd.Flags().GetString("categories")
+	cobra.CheckErr(err)
+	var categoryMap CategoryMap
+	readCategoryMap(categoriesFile, &categoryMap)
+	// get all accounts
+	var accounts []bookkeeper.Account
+	getAllAccounts(&accounts)
+
+	var entry JournalEntry
+	err = entry.InteractiveSingleUpdate(accounts, categoryMap)
+	cobra.CheckErr(err)
+	if entry.InteractiveConfirm() {
+		fmt.Println("Updating the journal entry to the server...")
+		err = entry.PatchToServer()
+		cobra.CheckErr(err)
+	} else {
+		fmt.Println("No journal entries or transactions are updated.")
+	}
 }

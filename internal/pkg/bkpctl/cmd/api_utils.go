@@ -89,3 +89,29 @@ func postSingleTransaction(trans bookkeeper.Transaction) (bookkeeper.Transaction
 	json.NewDecoder(resp.Body).Decode(&newTrans)
 	return newTrans, nil
 }
+
+func patchSingleTransaction(trans bookkeeper.Transaction) (bookkeeper.Transaction, error) {
+	var newTrans bookkeeper.Transaction
+	url_ := fmt.Sprintf("%stransactions/%d", BASE_URL, trans.Id)
+	buffer := new(bytes.Buffer)
+	json.NewEncoder(buffer).Encode(trans)
+
+	// prepare a PATCH
+	client := &http.Client{}
+	req, err := http.NewRequest(http.MethodPatch, url_, bytes.NewBuffer(buffer.Bytes()))
+	if err != nil {
+		return trans, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return trans, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return trans, fmt.Errorf("failed to update transaction; status: %s", resp.Status)
+	}
+	json.NewDecoder(resp.Body).Decode(&newTrans)
+	return newTrans, nil
+}

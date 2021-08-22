@@ -368,7 +368,12 @@ func interactiveTransactionWithPresets(
 		mergedMessages["Amount"] += fmt.Sprintf(" (current balance %s)",
 			ac.FormatMoney(float64(balance)/100))
 	}
-	amountStr := fmt.Sprintf("%.2f", float64(balance)/100)
+	var amountStr string
+	if balance != 0 {
+		amountStr = fmt.Sprintf("%.2f", float64(balance)/100)
+	} else {
+		amountStr = fmt.Sprintf("%.2f", float64(trans.Amount)/100)
+	}
 	if err = survey.AskOne(&survey.Input{
 		Message: mergedMessages["Amount"],
 		Default: amountStr,
@@ -614,6 +619,50 @@ func (entry *JournalEntry) InteractiveInvest(
 	return
 }
 
+func (entry *JournalEntry) InteractiveSingleUpdate(
+	accounts []bookkeeper.Account, categoryMap CategoryMap,
+) (err error) {
+	var accountNames []string
+	for _, a := range accounts {
+		accountNames = append(accountNames, a.Name)
+	}
+	entry.Clear()
+	entry.Transactions = append(entry.Transactions, bookkeeper.Transaction_{})
+
+	// get the id and fetch the transaction
+	var transId int
+	if err = survey.AskOne(&survey.Input{
+		Message: "What is the ID of the transaction you want to update?",
+	}, &transId); err != nil {
+		return
+	}
+	if err = getTransactionById(transId, &entry.Transactions[0]); err != nil {
+		return
+	}
+	if entry.Transactions[0].Type == "Out" ||
+		entry.Transactions[0].Type == "TransferOut" ||
+		entry.Transactions[0].Type == "LiabilityChange" {
+		entry.Transactions[0].Amount = -entry.Transactions[0].Amount
+	}
+
+	// list the current content
+	fmt.Println("The transaction to be updated is:")
+	tablePrintTransactions(entry.Transactions)
+
+	// update the transaction
+	if err = interactiveTransactionWithPresets(
+		accountNames, categoryMap, &entry.Transactions[0], nil, false,
+		nil); err != nil {
+		return
+	}
+
+	if err = entry.VerifyAndFillAccountIds(accounts); err != nil {
+		return
+	}
+
+	return
+}
+
 func (entry *JournalEntry) InteractiveSingleExpenseIncome(
 	accounts []bookkeeper.Account, categoryMap CategoryMap,
 ) (err error) {
@@ -670,6 +719,16 @@ func (entry *JournalEntry) InteractiveConfirm() bool {
 func (entry *JournalEntry) PostToServer() error {
 	for _, trans := range entry.Transactions {
 		_, err := postSingleTransaction(trans.Transaction)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (entry *JournalEntry) PatchToServer() error {
+	for _, trans := range entry.Transactions {
+		_, err := patchSingleTransaction(trans.Transaction)
 		if err != nil {
 			return err
 		}
