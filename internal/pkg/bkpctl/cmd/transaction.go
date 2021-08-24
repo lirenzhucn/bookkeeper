@@ -1,14 +1,13 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"net/url"
 	"os"
+	"sort"
 	"strings"
+	"time"
 
+	"github.com/leekchan/accounting"
 	"github.com/lirenzhucn/bookkeeper/internal/pkg/bookkeeper"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
@@ -44,10 +43,21 @@ var transReconCmd = &cobra.Command{
 		}
 		accountName, err := cmd.Flags().GetString("account")
 		cobra.CheckErr(err)
-		account, err := getAccountByName(accountName)
+		// get account balance at start date
+		oneDay, _ := time.ParseDuration("24h")
+		account, err := singleAccountBalance(
+			accountName, dateRange.startDate.Add(-oneDay).Format("2006/01/02"))
 		cobra.CheckErr(err)
-		fmt.Println(dateRange)
-		fmt.Println(account)
+		// get transactions between
+		queryStr := fmt.Sprintf(
+			`date>=%s AND date<=%s AND a.name="%s"`,
+			dateRange.startDate.Format("2006/01/02"),
+			dateRange.endDate.Format("2006/01/02"),
+			accountName,
+		)
+		transactions, err := getTransactionsByQuery(queryStr)
+		cobra.CheckErr(err)
+		tablePrintReconcile(transactions, account.Balance)
 	},
 }
 
@@ -94,7 +104,6 @@ func lsTransactions(cmd *cobra.Command, args []string) {
 	var (
 		err      error
 		queryStr string
-		url_     string
 	)
 
 	queryStr, err = cmd.Flags().GetString("query")
@@ -103,16 +112,7 @@ func lsTransactions(cmd *cobra.Command, args []string) {
 		queryStr = "past week"
 	}
 	queryStr = parseQueryString(queryStr)
-	url_ = fmt.Sprintf("%stransactions?queryString=%s", BASE_URL,
-		url.QueryEscape(queryStr))
-
-	var transactions []bookkeeper.Transaction_
-	resp, err := http.Get(url_)
-	cobra.CheckErr(err)
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	cobra.CheckErr(err)
-	err = json.Unmarshal(body, &transactions)
+	transactions, err := getTransactionsByQuery(queryStr)
 	cobra.CheckErr(err)
 	tablePrintTransactions(transactions)
 }
@@ -131,6 +131,35 @@ func tablePrintTransactions(transactions []bookkeeper.Transaction_) {
 			t.AssociationId,
 		}
 		table.Append(row)
+	}
+	table.Render()
+}
+
+func tablePrintReconcile(transactions []bookkeeper.Transaction_, startingBalance int64) {
+	// sort transactions
+	sort.Slice(transactions, func(i, j int) bool {
+		return transactions[i].Date.After(transactions[j].Date)
+	})
+	ac := accounting.Accounting{Symbol: "$", Precision: 2}
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{
+		"Id", "Type", "Date", "Category", "Sub-Category", "Account Name",
+		"Amount", "Balance", "Notes",
+	})
+	balance := startingBalance
+	for _, t := range transactions {
+		balance += t.Amount
+	}
+	for _, t := range transactions {
+		row := []string{
+			fmt.Sprintf("%d", t.Id), t.Type, t.Date.Format("2006/01/02"),
+			t.Category, t.SubCategory, t.AccountName,
+			ac.FormatMoney(float32(t.Amount) / 100.0),
+			ac.FormatMoney(float32(balance) / 100.0),
+			t.Notes,
+		}
+		table.Append(row)
+		balance -= t.Amount
 	}
 	table.Render()
 }

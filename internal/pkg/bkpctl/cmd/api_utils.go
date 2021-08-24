@@ -132,3 +132,22 @@ func patchSingleTransaction(trans bookkeeper.Transaction) (bookkeeper.Transactio
 	json.NewDecoder(resp.Body).Decode(&newTrans)
 	return newTrans, nil
 }
+
+func getTransactionsByQuery(queryStr string) (transactions []bookkeeper.Transaction_, err error) {
+	url_ := fmt.Sprintf("%stransactions?queryString=%s", BASE_URL,
+		url.QueryEscape(queryStr))
+	resp, err := http.Get(url_)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return
+	}
+	err = json.Unmarshal(body, &transactions)
+	if err != nil {
+		return
+	}
+	return
+}
