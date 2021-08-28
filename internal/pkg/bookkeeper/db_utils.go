@@ -217,6 +217,13 @@ func GetSingleAccount(dbpool *pgxpool.Pool, id int) (Account, error) {
 	return account, err
 }
 
+func GetSingleAccountByName(dbpool *pgxpool.Pool, name string) (Account, error) {
+	var account Account
+	row := dbpool.QueryRow(context.Background(), "select id, name, desc_, tags from accounts where name = $1", name)
+	err := row.Scan(&account.Id, &account.Name, &account.Desc, &account.Tags)
+	return account, err
+}
+
 func GetSingleTransaction(dbpool *pgxpool.Pool, id int) (Transaction_, error) {
 	var transaction Transaction_
 	row := dbpool.QueryRow(

@@ -50,6 +50,27 @@ func returnSingleAccount(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(account)
 }
 
+func returnAccountByName(w http.ResponseWriter, r *http.Request) {
+	sugar := zap.L().Sugar()
+	defer sugar.Sync()
+
+	accountName := r.FormValue("accountName")
+	sugar.Infow("got a query on account", "accountName", accountName)
+	account, err := bookkeeper.GetSingleAccountByName(dbpool, accountName)
+	if err != nil {
+		if strings.Contains(err.Error(), "no rows in result set") {
+			http.Error(w, "Account not found", 404)
+		} else {
+			http.Error(w, "Internal server error", 500)
+			sugar.Errorw("failed to get account", "accountName", accountName,
+				"error", err)
+		}
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(account)
+}
+
 func postAccount(w http.ResponseWriter, r *http.Request) {
 	postOrPatchAccount(w, r, -1)
 }

@@ -1,17 +1,13 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"net/url"
 	"os"
-	"regexp"
-	"strconv"
+	"sort"
 	"strings"
 	"time"
 
+	"github.com/leekchan/accounting"
 	"github.com/lirenzhucn/bookkeeper/internal/pkg/bookkeeper"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
@@ -27,14 +23,43 @@ var transLsCmd = &cobra.Command{
 	Long:  "List either all transactions or those between two dates",
 	Run:   lsTransactions,
 }
-
 var transUpdateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Update a transaction",
 	Run:   updateTransactions,
 }
-
-var numDaysMatcher = regexp.MustCompile(`^past\s*(\d+)\s*day(s*)$`)
+var transReconCmd = &cobra.Command{
+	Use:   "recon",
+	Short: "Reconcile one account",
+	Run: func(cmd *cobra.Command, args []string) {
+		dateRange_, err := cmd.Flags().GetString("date-range")
+		cobra.CheckErr(err)
+		if dateRange_ == "" {
+			dateRange_ = "past week"
+		}
+		dateRange, ok := parseDateRange(dateRange_)
+		if !ok {
+			cobra.CheckErr(fmt.Errorf("invalid date range %s", dateRange_))
+		}
+		accountName, err := cmd.Flags().GetString("account")
+		cobra.CheckErr(err)
+		// get account balance at start date
+		oneDay, _ := time.ParseDuration("24h")
+		account, err := singleAccountBalance(
+			accountName, dateRange.startDate.Add(-oneDay).Format("2006/01/02"))
+		cobra.CheckErr(err)
+		// get transactions between
+		queryStr := fmt.Sprintf(
+			`date>=%s AND date<=%s AND a.name="%s"`,
+			dateRange.startDate.Format("2006/01/02"),
+			dateRange.endDate.Format("2006/01/02"),
+			accountName,
+		)
+		transactions, err := getTransactionsByQuery(queryStr)
+		cobra.CheckErr(err)
+		tablePrintReconcile(transactions, account.Balance)
+	},
+}
 
 func parseQueryString(original string) (parsed string) {
 	phrases := strings.SplitN(original, "on", 2)
@@ -44,33 +69,9 @@ func parseQueryString(original string) (parsed string) {
 	dateRange, accountName := phrases[0], phrases[1]
 	dateRange = strings.TrimSpace(dateRange)
 	accountName = strings.TrimSpace(accountName)
-	matchedGroups := numDaysMatcher.FindStringSubmatch(dateRange)
-	switch {
-	case dateRange == "past week":
-		today := time.Now()
-		cutoff := today.Add(-time.Hour * 24 * 6)
-		parsed = parsed + fmt.Sprintf(
-			"date>=%s AND date<=%s", cutoff.Format("2006/01/02"),
-			today.Format("2006/01/02"),
-		)
-	case dateRange == "last week":
-		today := time.Now().Add(-time.Hour * 24 * 7)
-		cutoff := today.Add(-time.Hour * 24 * 6)
-		parsed = parsed + fmt.Sprintf(
-			"date>=%s AND date<=%s", cutoff.Format("2006/01/02"),
-			today.Format("2006/01/02"),
-		)
-	case matchedGroups != nil:
-		numDays, _ := strconv.ParseInt(matchedGroups[1], 10, 64)
-		today := time.Now()
-		cutoff := today.Add(-time.Hour * 24 * time.Duration(numDays-1))
-		parsed = parsed + fmt.Sprintf(
-			"date>=%s AND date<=%s", cutoff.Format("2006/01/02"),
-			today.Format("2006/01/02"),
-		)
-	default:
-		parsed = original
-		return
+	parsedDateRange, ok := dateRangeToQuery(dateRange)
+	if ok {
+		parsed = parsed + parsedDateRange
 	}
 	if accountName != "" {
 		parsed = parsed + fmt.Sprintf(` AND a.name="%s"`, accountName)
@@ -84,8 +85,18 @@ func initTransCmd(rootCmd *cobra.Command) {
 		"categories", "c", "",
 		"Path to the Category definition file (default: ./configs/category_map.json)",
 	)
+	transReconCmd.Flags().StringP(
+		"account", "a", "",
+		"The name of the account to reconcile",
+	)
+	transReconCmd.Flags().StringP(
+		"date-range", "d", "",
+		"The date range to reconcile (default: past week)",
+	)
+	transReconCmd.MarkFlagRequired("account")
 	transCmd.AddCommand(transLsCmd)
 	transCmd.AddCommand(transUpdateCmd)
+	transCmd.AddCommand(transReconCmd)
 	rootCmd.AddCommand(transCmd)
 }
 
@@ -93,7 +104,6 @@ func lsTransactions(cmd *cobra.Command, args []string) {
 	var (
 		err      error
 		queryStr string
-		url_     string
 	)
 
 	queryStr, err = cmd.Flags().GetString("query")
@@ -102,16 +112,7 @@ func lsTransactions(cmd *cobra.Command, args []string) {
 		queryStr = "past week"
 	}
 	queryStr = parseQueryString(queryStr)
-	url_ = fmt.Sprintf("%stransactions?queryString=%s", BASE_URL,
-		url.QueryEscape(queryStr))
-
-	var transactions []bookkeeper.Transaction_
-	resp, err := http.Get(url_)
-	cobra.CheckErr(err)
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	cobra.CheckErr(err)
-	err = json.Unmarshal(body, &transactions)
+	transactions, err := getTransactionsByQuery(queryStr)
 	cobra.CheckErr(err)
 	tablePrintTransactions(transactions)
 }
@@ -130,6 +131,35 @@ func tablePrintTransactions(transactions []bookkeeper.Transaction_) {
 			t.AssociationId,
 		}
 		table.Append(row)
+	}
+	table.Render()
+}
+
+func tablePrintReconcile(transactions []bookkeeper.Transaction_, startingBalance int64) {
+	// sort transactions
+	sort.Slice(transactions, func(i, j int) bool {
+		return transactions[i].Date.After(transactions[j].Date)
+	})
+	ac := accounting.Accounting{Symbol: "$", Precision: 2}
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{
+		"Id", "Type", "Date", "Category", "Sub-Category", "Account Name",
+		"Amount", "Balance", "Notes",
+	})
+	balance := startingBalance
+	for _, t := range transactions {
+		balance += t.Amount
+	}
+	for _, t := range transactions {
+		row := []string{
+			fmt.Sprintf("%d", t.Id), t.Type, t.Date.Format("2006/01/02"),
+			t.Category, t.SubCategory, t.AccountName,
+			ac.FormatMoney(float32(t.Amount) / 100.0),
+			ac.FormatMoney(float32(balance) / 100.0),
+			t.Notes,
+		}
+		table.Append(row)
+		balance -= t.Amount
 	}
 	table.Render()
 }
