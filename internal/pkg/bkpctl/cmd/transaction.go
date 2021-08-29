@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/leekchan/accounting"
 	"github.com/lirenzhucn/bookkeeper/internal/pkg/bookkeeper"
 	"github.com/olekukonko/tablewriter"
@@ -60,6 +61,29 @@ var transReconCmd = &cobra.Command{
 		tablePrintReconcile(transactions, account.Balance)
 	},
 }
+var transDeleteCmd = &cobra.Command{
+	Use:   "delete",
+	Short: "Delete one transaction",
+	Run: func(cmd *cobra.Command, args []string) {
+		transId, err := cmd.Flags().GetInt("id")
+		cobra.CheckErr(err)
+		yes, err := cmd.Flags().GetBool("yes")
+		cobra.CheckErr(err)
+		var trans bookkeeper.Transaction_
+		err = getTransactionById(transId, &trans)
+		cobra.CheckErr(err)
+		tablePrintTransactions([]bookkeeper.Transaction_{trans})
+		if !yes {
+			survey.AskOne(&survey.Confirm{
+				Message: "Are you sure that you want to delete this transaction?",
+			}, &yes)
+		}
+		if yes {
+			err = deleteSingleTransaction(transId)
+			cobra.CheckErr(err)
+		}
+	},
+}
 
 func parseQueryString(original string) (parsed string) {
 	phrases := strings.SplitN(original, "on", 2)
@@ -93,10 +117,14 @@ func initTransCmd(rootCmd *cobra.Command) {
 		"date-range", "d", "",
 		"The date range to reconcile (default: past week)",
 	)
+	transDeleteCmd.Flags().IntP("id", "i", -1, "ID of the transaction to delete")
+	transDeleteCmd.MarkFlagRequired("id")
+	transDeleteCmd.Flags().BoolP("yes", "y", false, "Skip confirmation if set")
 	transReconCmd.MarkFlagRequired("account")
 	transCmd.AddCommand(transLsCmd)
 	transCmd.AddCommand(transUpdateCmd)
 	transCmd.AddCommand(transReconCmd)
+	transCmd.AddCommand(transDeleteCmd)
 	rootCmd.AddCommand(transCmd)
 }
 

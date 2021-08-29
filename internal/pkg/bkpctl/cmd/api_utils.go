@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/lirenzhucn/bookkeeper/internal/pkg/bookkeeper"
 )
@@ -131,6 +132,22 @@ func patchSingleTransaction(trans bookkeeper.Transaction) (bookkeeper.Transactio
 	}
 	json.NewDecoder(resp.Body).Decode(&newTrans)
 	return newTrans, nil
+}
+
+func deleteSingleTransaction(transId int) (err error) {
+	url_ := fmt.Sprintf("%stransactions/%d", BASE_URL, transId)
+	// prepare a DELETE
+	client := &http.Client{}
+	req, err := http.NewRequest(http.MethodDelete, url_, strings.NewReader(""))
+	if err != nil {
+		return
+	}
+	resp, err := client.Do(req)
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("failed to delete transaction %d; status: %s", transId, resp.Status)
+		return
+	}
+	return
 }
 
 func getTransactionsByQuery(queryStr string) (transactions []bookkeeper.Transaction_, err error) {
