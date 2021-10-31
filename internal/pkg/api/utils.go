@@ -35,7 +35,7 @@ type dateRange struct {
 	endDate   time.Time
 }
 
-var dateRangeShorthandRegex = regexp.MustCompile(`^([0-9]{4})([HQ][0-9])$`)
+var dateRangeShorthandRegex = regexp.MustCompile(`^([0-9]{4})([HQ][0-9]|)$`)
 
 func parseDateRangeShorthand(s string) (dr dateRange, ok bool) {
 	ok = true
@@ -68,6 +68,9 @@ func parseDateRangeShorthand(s string) (dr dateRange, ok bool) {
 		dr.endDate = time.Date(y, 6, 30, 23, 59, 59, 0, time.UTC)
 	case "h2":
 		dr.startDate = time.Date(y, 7, 1, 0, 0, 0, 0, time.UTC)
+		dr.endDate = time.Date(y, 12, 31, 23, 59, 59, 0, time.UTC)
+	case "":
+		dr.startDate = time.Date(y, 1, 1, 0, 0, 0, 0, time.UTC)
 		dr.endDate = time.Date(y, 12, 31, 23, 59, 59, 0, time.UTC)
 	default:
 		ok = false
